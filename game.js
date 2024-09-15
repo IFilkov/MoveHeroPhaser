@@ -44,12 +44,13 @@ const config = {
 const game = new Phaser.Game(config);
 
 // Переменные для игрового объекта и времени смены направления
-let circle;
 let circleBody;
 let direction = { x: 1, y: 1 };
 let speed = 100; // скорость передвижения
-let changeDirectionTime = 4000; // смена направления каждые 8 секунд
+let changeDirectionTime = 2000; // смена направления каждые 8 секунд
 let lastDirectionChange = 0;
+let isMovingToMouse = false; // Флаг для отслеживания режима движения
+let mousePos = { x: 0, y: 0 }; // Позиция курсора
 
 // Функция для предзагрузки ресурсов (если необходимо)
 function preload() {
@@ -58,11 +59,7 @@ function preload() {
 
 // Функция для создания начальных объектов в игре
 function create() {
-  // Создание графического объекта круга
-  let graphics = this.add.graphics({ fillStyle: { color: 0x00ff00 } });
-  circle = graphics.fillCircle(0, 0, 10);
-
-  // Создаем физическое тело и добавляем его на сцену
+  // Создание графического объекта круга и физического тела
   circleBody = this.add.circle(
     config.width / 2,
     config.height / 2,
@@ -75,6 +72,17 @@ function create() {
 
   // Установка таймера для смены направления
   lastDirectionChange = this.time.now;
+
+  // Обработчик нажатия пробела
+  this.input.keyboard.on("keydown-SPACE", () => {
+    isMovingToMouse = !isMovingToMouse; // Переключаем режим движения
+  });
+
+  // Отслеживание позиции мыши
+  this.input.on("pointermove", (pointer) => {
+    mousePos.x = pointer.x;
+    mousePos.y = pointer.y;
+  });
 }
 
 // Функция смены направления
@@ -90,6 +98,27 @@ function changeDirection() {
 
 // Основная функция обновления игры
 function update(time, delta) {
+  if (isMovingToMouse) {
+    // Перемещение к мыши
+    moveToMouse(delta);
+  } else {
+    // Случайное перемещение
+    moveRandomly(time, delta);
+  }
+}
+
+// Функция перемещения к мыши
+function moveToMouse(delta) {
+  const dx = mousePos.x - circleBody.x;
+  const dy = mousePos.y - circleBody.y;
+  const angle = Math.atan2(dy, dx);
+
+  circleBody.x += Math.cos(angle) * speed * (delta / 1000);
+  circleBody.y += Math.sin(angle) * speed * (delta / 1000);
+}
+
+// Функция случайного перемещения
+function moveRandomly(time, delta) {
   // Смена направления каждые 8 секунд
   if (time - lastDirectionChange > changeDirectionTime) {
     changeDirection();
