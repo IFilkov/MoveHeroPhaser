@@ -16,6 +16,7 @@
 //     update: update,
 //   },
 // };
+
 const config = {
   type: Phaser.AUTO,
   width: window.innerWidth,
@@ -44,12 +45,14 @@ const config = {
 const game = new Phaser.Game(config);
 
 // Переменные для игрового объекта и времени смены направления
-let circle;
 let circleBody;
 let direction = { x: 1, y: 1 };
 let speed = 100; // скорость передвижения
-let changeDirectionTime = 4000; // смена направления каждые 8 секунд
+let changeDirectionTime = 8000; // смена направления каждые 8 секунд
 let lastDirectionChange = 0;
+let isMovingToMouse = false; // Флаг для отслеживания режима движения
+let mousePos = { x: 0, y: 0 }; // Позиция курсора
+let gamepad; // Переменная для геймпада
 
 // Функция для предзагрузки ресурсов (если необходимо)
 function preload() {
@@ -58,11 +61,7 @@ function preload() {
 
 // Функция для создания начальных объектов в игре
 function create() {
-  // Создание графического объекта круга
-  let graphics = this.add.graphics({ fillStyle: { color: 0x00ff00 } });
-  circle = graphics.fillCircle(0, 0, 10);
-
-  // Создаем физическое тело и добавляем его на сцену
+  // Создание графического объекта круга и физического тела
   circleBody = this.add.circle(
     config.width / 2,
     config.height / 2,
@@ -75,6 +74,28 @@ function create() {
 
   // Установка таймера для смены направления
   lastDirectionChange = this.time.now;
+
+  // Обработчик нажатия пробела
+  this.input.keyboard.on("keydown-SPACE", () => {
+    isMovingToMouse = !isMovingToMouse; // Переключаем режим движения
+  });
+
+  // Отслеживание позиции мыши
+  this.input.on("pointermove", (pointer) => {
+    mousePos.x = pointer.x;
+    mousePos.y = pointer.y;
+  });
+
+  // Отслеживание события подключения геймпада
+  this.input.gamepad.on("connected", (pad) => {
+    gamepad = pad;
+    console.log("Gamepad connected:", gamepad);
+  });
+
+  // Проверка на наличие геймпада (если подключен заранее)
+  if (this.input.gamepad.total > 0) {
+    gamepad = this.input.gamepad.getPad(0);
+  }
 }
 
 // Функция смены направления
@@ -90,6 +111,36 @@ function changeDirection() {
 
 // Основная функция обновления игры
 function update(time, delta) {
+  if (isMovingToMouse) {
+    // Перемещение к мыши
+    moveToMouse(delta);
+  } else {
+    // Случайное перемещение или движение с геймпада
+    if (gamepad) {
+      moveWithGamepad(delta);
+    } else {
+      moveRandomly(time, delta);
+    }
+  }
+
+  // Проверяем нажатие кнопки A или X на геймпаде для переключения режима движения
+  if (gamepad && (gamepad.buttons[0].pressed || gamepad.buttons[2].pressed)) {
+    isMovingToMouse = !isMovingToMouse;
+  }
+}
+
+// Функция перемещения к мыши
+function moveToMouse(delta) {
+  const dx = mousePos.x - circleBody.x;
+  const dy = mousePos.y - circleBody.y;
+  const angle = Math.atan2(dy, dx);
+
+  circleBody.x += Math.cos(angle) * speed * (delta / 1000);
+  circleBody.y += Math.sin(angle) * speed * (delta / 1000);
+}
+
+// Функция случайного перемещения
+function moveRandomly(time, delta) {
   // Смена направления каждые 8 секунд
   if (time - lastDirectionChange > changeDirectionTime) {
     changeDirection();
@@ -99,6 +150,23 @@ function update(time, delta) {
   // Обновление позиции круга на экране
   circleBody.x += direction.x * speed * (delta / 1000);
   circleBody.y += direction.y * speed * (delta / 1000);
+
+  // Проверка границ экрана и отражение
+  if (circleBody.x <= 0 || circleBody.x >= config.width) {
+    direction.x *= -1;
+  }
+  if (circleBody.y <= 0 || circleBody.y >= config.height) {
+    direction.y *= -1;
+  }
+}
+
+// Функция перемещения с геймпада
+function moveWithGamepad(delta) {
+  const axisX = gamepad.axes[0].getValue(); // Горизонтальная ось (левый стик)
+  const axisY = gamepad.axes[1].getValue(); // Вертикальная ось (левый стик)
+
+  circleBody.x += axisX * speed * (delta / 1000);
+  circleBody.y += axisY * speed * (delta / 1000);
 
   // Проверка границ экрана и отражение
   if (circleBody.x <= 0 || circleBody.x >= config.width) {
