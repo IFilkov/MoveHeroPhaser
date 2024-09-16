@@ -1,22 +1,3 @@
-// Инициализация конфигурации игры
-// const config = {
-//   type: Phaser.AUTO,
-//   width: window.innerWidth,
-//   height: window.innerHeight,
-//   physics: {
-//     default: "arcade",
-//     arcade: {
-//       gravity: { y: 0 },
-//       debug: false,
-//     },
-//   },
-//   scene: {
-//     preload: preload,
-//     create: create,
-//     update: update,
-//   },
-// };
-
 const config = {
   type: Phaser.AUTO,
   width: window.innerWidth,
@@ -48,16 +29,14 @@ const game = new Phaser.Game(config);
 let circleBody;
 let direction = { x: 1, y: 1 };
 let speed = 100; // скорость передвижения
-let changeDirectionTime = 8000; // смена направления каждые 8 секунд
+let changeDirectionTime = 2000; // смена направления каждые 8 секунд
 let lastDirectionChange = 0;
-let isMovingToMouse = false; // Флаг для отслеживания режима движения
+let controlMode = "autopilot"; // Режим управления: 'autopilot', 'mouse', 'gamepad'
 let mousePos = { x: 0, y: 0 }; // Позиция курсора
 let gamepad; // Переменная для геймпада
 
 // Функция для предзагрузки ресурсов (если необходимо)
-function preload() {
-  // В данном случае ресурсы не загружаем, но функция обязательна для Phaser
-}
+function preload() {}
 
 // Функция для создания начальных объектов в игре
 function create() {
@@ -75,9 +54,13 @@ function create() {
   // Установка таймера для смены направления
   lastDirectionChange = this.time.now;
 
-  // Обработчик нажатия пробела
+  // Обработчик нажатия пробела — переключение между автопилотом и управлением мышью
   this.input.keyboard.on("keydown-SPACE", () => {
-    isMovingToMouse = !isMovingToMouse; // Переключаем режим движения
+    if (controlMode === "autopilot") {
+      controlMode = "mouse";
+    } else {
+      controlMode = "autopilot";
+    }
   });
 
   // Отслеживание позиции мыши
@@ -111,21 +94,22 @@ function changeDirection() {
 
 // Основная функция обновления игры
 function update(time, delta) {
-  if (isMovingToMouse) {
-    // Перемещение к мыши
+  if (controlMode === "mouse") {
     moveToMouse(delta);
+  } else if (controlMode === "gamepad" && gamepad) {
+    moveWithGamepad(delta);
   } else {
-    // Случайное перемещение или движение с геймпада
-    if (gamepad) {
-      moveWithGamepad(delta);
-    } else {
-      moveRandomly(time, delta);
-    }
+    moveRandomly(time, delta);
   }
 
-  // Проверяем нажатие кнопки A или X на геймпаде для переключения режима движения
-  if (gamepad && (gamepad.buttons[0].pressed || gamepad.buttons[2].pressed)) {
-    isMovingToMouse = !isMovingToMouse;
+  // Проверяем нажатие кнопки A на геймпаде для переключения между геймпадом и автопилотом
+  if (gamepad && gamepad.buttons[0].pressed) {
+    // Кнопка A на геймпаде
+    if (controlMode === "autopilot") {
+      controlMode = "gamepad";
+    } else {
+      controlMode = "autopilot";
+    }
   }
 }
 
@@ -141,7 +125,6 @@ function moveToMouse(delta) {
 
 // Функция случайного перемещения
 function moveRandomly(time, delta) {
-  // Смена направления каждые 8 секунд
   if (time - lastDirectionChange > changeDirectionTime) {
     changeDirection();
     lastDirectionChange = time;
