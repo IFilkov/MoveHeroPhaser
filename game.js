@@ -34,6 +34,7 @@ let lastDirectionChange = 0;
 let controlMode = "autopilot"; // Режим управления: 'autopilot', 'mouse', 'gamepad'
 let mousePos = { x: 0, y: 0 }; // Позиция курсора
 let gamepad; // Переменная для геймпада
+let isButtonPressed = false; // Флаг для отслеживания состояния кнопки A на геймпаде
 
 // Функция для предзагрузки ресурсов (если необходимо)
 function preload() {}
@@ -103,13 +104,19 @@ function update(time, delta) {
   }
 
   // Проверяем нажатие кнопки A на геймпаде для переключения между геймпадом и автопилотом
-  if (gamepad && gamepad.buttons[0].pressed) {
+  if (gamepad && gamepad.buttons[0].pressed && !isButtonPressed) {
     // Кнопка A на геймпаде
+    isButtonPressed = true; // Отмечаем, что кнопка нажата
     if (controlMode === "autopilot") {
       controlMode = "gamepad";
     } else {
       controlMode = "autopilot";
     }
+  }
+
+  // Сбрасываем флаг, если кнопка A отпущена
+  if (gamepad && !gamepad.buttons[0].pressed) {
+    isButtonPressed = false;
   }
 }
 
