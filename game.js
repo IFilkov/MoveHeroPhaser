@@ -511,6 +511,16 @@ function create2() {
   circleBody.body.setCollideWorldBounds(true);
   circleBody.body.setBounce(1, 1);
 
+  // Создаём Enemy2 с аналогичной логикой как у circleBody
+  enemy2 = this.add.circle(config.width / 2, config.height / 2, 10, 0xff6347);
+  this.physics.add.existing(enemy2);
+  // enemy2.body.setCollideWorldBounds(true);
+  // enemy2.body.setBounce(1, 1);
+
+  // Создание физического тела для enemy2
+  this.physics.world.enable(enemy2);
+  enemy2.body.setCircle(10); // Размер коллайдера (подбирай нужный радиус)
+
   lastDirectionChange = this.time.now;
 
   this.input.on("pointermove", (pointer) => {
@@ -559,6 +569,8 @@ function create2() {
 }
 
 function update2(time, delta) {
+  moveToNearestSpectatorForEnemy2.call(this);
+
   // Логика управления circleBody
   if (controlMode === "mouse") {
     moveToMouse(delta);
@@ -655,6 +667,78 @@ let baseSpeed = 150; // Базовая скорость
 let speed2 = baseSpeed; // Текущая скорость
 let lastDashTime = 0; // Время последнего ускорения
 
+let baseSpeedEnemy2 = 150; // Базовая скорость
+let speedEnemy2 = baseSpeed; // Текущая скорость
+let lastDashTimeEnemy2 = 0; // Время последнего ускорения
+
+// Функция для перемещения Enemy2 к ближайшему зрителю
+function moveToNearestSpectatorForEnemy2() {
+  const remainingSpectators = spectatorsGroup
+    .getChildren()
+    .filter((spectator) => !spectator.body.checkCollision.none);
+
+  if (remainingSpectators.length === 0) {
+    enemy2.body.setVelocity(0, 0); // Остановить движение, если зрителей не осталось
+    return;
+  }
+
+  let nearestSpectator = null;
+  let minDistance = Infinity;
+
+  remainingSpectators.forEach((spectator) => {
+    const distance = Phaser.Math.Distance.Between(
+      enemy2.x,
+      enemy2.y,
+      spectator.x,
+      spectator.y
+    );
+    if (distance < minDistance) {
+      minDistance = distance;
+      nearestSpectator = spectator;
+    }
+  });
+
+  if (nearestSpectator) {
+    const targetX = nearestSpectator.x;
+    const targetY = nearestSpectator.y;
+
+    const directionX = targetX - enemy2.x;
+    const directionY = targetY - enemy2.y;
+    const magnitude = Math.sqrt(
+      directionX * directionX + directionY * directionY
+    );
+
+    // const speed = 150;
+
+    // Проверяем, прошло ли 10 секунд с момента последнего ускорения
+    const currentTime = this.time.now; // Получаем текущее время игры
+    if (currentTime - lastDashTimeEnemy2 > 12000) {
+      // Если прошло более 10 секунд, увеличиваем скорость
+      speedEnemy2 = baseSpeedEnemy2 * 4; // Ускоряем в два раза
+      lastDashTimeEnemy2 = currentTime; // Обновляем время последнего ускорения
+
+      // Через 1 секунду возвращаем обычную скорость
+      this.time.delayedCall(1000, () => {
+        speedEnemy2 = baseSpeedEnemy2; // Возвращаем базовую скорость
+      });
+    }
+    const velocityX = (directionX / magnitude) * speedEnemy2;
+    const velocityY = (directionY / magnitude) * speedEnemy2;
+
+    enemy2.body.setVelocity(velocityX, velocityY);
+
+    // Проверка коллизии по расстоянию
+    if (minDistance < 10) {
+      console.log("Check");
+      // Если враг близко к зрителю
+      nearestSpectator.clear();
+      nearestSpectator.fillStyle(0x008080, 1); // Голубой цвет
+      nearestSpectator.fillCircle(0, 0, 20);
+      nearestSpectator.body.checkCollision.none = true; // Отключаем коллизию
+    }
+  }
+}
+
 function moveToNearestSpectator(forceMove = false) {
   // Если нет зрителей на экране или все уже обработаны, ничего не делаем
   const remainingSpectators = spectatorsGroup
@@ -725,102 +809,6 @@ function moveToNearestSpectator(forceMove = false) {
   }
 }
 
-// function moveToNearestSpectator() {
-//   // Если нет зрителей на экране, ничего не делаем
-//   if (spectatorsGroup.getChildren().length === 0) {
-//     circleBody.body.setVelocity(0, 0); // Остановить движение
-//     return;
-//   }
-
-//   let nearestSpectator = null;
-//   let minDistance = Infinity;
-
-//   // Определяем ближайшего зрителя, который еще не обработан (т.е. checkCollision не отключен)
-//   spectatorsGroup.getChildren().forEach((spectator) => {
-//     if (spectator.body.checkCollision.none) {
-//       return; // Пропустить уже обработанных зрителей
-//     }
-
-//     const distance = Phaser.Math.Distance.Between(
-//       circleBody.x,
-//       circleBody.y,
-//       spectator.x,
-//       spectator.y
-//     );
-//     if (distance < minDistance) {
-//       minDistance = distance;
-//       nearestSpectator = spectator;
-//     }
-//   });
-
-//   // Если нашли ближайшего зрителя, движемся к нему
-//   if (nearestSpectator) {
-//     const targetX = nearestSpectator.x;
-//     const targetY = nearestSpectator.y;
-
-//     // Вычисляем направление
-//     const directionX = targetX - circleBody.x;
-//     const directionY = targetY - circleBody.y;
-//     const magnitude = Math.sqrt(
-//       directionX * directionX + directionY * directionY
-//     );
-
-//     // Нормализуем направление и задаем скорость
-//     const speed = 150; // Скорость движения
-//     const velocityX = (directionX / magnitude) * speed;
-//     const velocityY = (directionY / magnitude) * speed;
-
-//     // Устанавливаем скорость в сторону ближайшего зрителя
-//     circleBody.body.setVelocity(velocityX, velocityY);
-//   }
-// }
-
-// function moveToNearestSpectator() {
-//   // Если нет зрителей на экране, ничего не делаем
-//   if (spectatorsGroup.getChildren().length === 0) {
-//     circleBody.body.setVelocity(0, 0); // Остановить движение
-//     return;
-//   }
-
-//   let nearestSpectator = null;
-//   let minDistance = Infinity;
-
-//   // Определяем ближайшего зрителя
-//   spectatorsGroup.getChildren().forEach((spectator) => {
-//     const distance = Phaser.Math.Distance.Between(
-//       circleBody.x,
-//       circleBody.y,
-//       spectator.x,
-//       spectator.y
-//     );
-//     if (distance < minDistance) {
-//       minDistance = distance;
-//       nearestSpectator = spectator;
-//     }
-//   });
-
-//   // Если нашли ближайшего зрителя, движемся к нему
-//   if (nearestSpectator) {
-//     const targetX = nearestSpectator.x;
-//     const targetY = nearestSpectator.y;
-
-//     // Вычисляем направление
-//     const directionX = targetX - circleBody.x;
-//     const directionY = targetY - circleBody.y;
-//     const magnitude = Math.sqrt(
-//       directionX * directionX + directionY * directionY
-//     );
-
-//     // Нормализуем направление и задаем скорость
-//     const speed = 150; // Скорость движения
-//     const velocityX = (directionX / magnitude) * speed;
-//     const velocityY = (directionY / magnitude) * speed;
-
-//     // Устанавливаем скорость в сторону ближайшего зрителя
-//     circleBody.body.setVelocity(velocityX, velocityY);
-//   }
-// }
-
 function moveWithGamepad(delta) {
   const axisX = gamepad.axes[0].getValue();
   const axisY = gamepad.axes[1].getValue();
@@ -835,33 +823,6 @@ function moveWithGamepad(delta) {
     direction.y *= -1;
   }
 }
-
-// function spawnSpectator() {
-//   // Определяем случайную позицию появления по оси Y
-//   const randomY = Phaser.Math.Between(100, config.height - 100);
-
-//   // Создаем нового зрителя в левой части экрана
-//   const spectator = this.add.sprite(0, randomY, "spectator");
-
-//   // Устанавливаем круглый хитбокс, используя setSize и setOffset
-//   const radius = spectator.width / 2;
-//   // spectator.setSize(radius * 2, radius * 2); // Размер хитбокса как круг
-//   // spectator.setOffset(-radius, -radius); // Смещаем хитбокс, чтобы он был в центре спрайта
-//   spectator.setCircle(radius); // Используем метод setCircle для округлого хитбокса
-
-//   // Устанавливаем скорость движения зрителя вправо
-//   const speed = 100;
-
-//   // Анимация движения зрителя
-//   const moveTween = this.tweens.add({
-//     targets: spectator,
-//     x: config.width + 50, // Движется за пределы экрана
-//     duration: (config.width / speed) * 1000, // Рассчитываем длительность, исходя из скорости
-//     onComplete: function () {
-//       spectator.destroy(); // Уничтожаем объект, когда он уйдет за экран
-//     },
-//   });
-// }
 
 // Обрабатываем столкновение circleBody со зрителями
 function handleCollision(circleBody, spectator) {
@@ -913,7 +874,7 @@ function spawnSpectator() {
 function startSpawningSpectators() {
   spectatorsGroup = this.physics.add.group(); // Группа для зрителей
   this.time.addEvent({
-    delay: 1000, // Задержка в 1 секунду
+    delay: 500, // Задержка в 1 секунду
     callback: spawnSpectator,
     callbackScope: this,
     loop: true, // Бесконечный цикл
