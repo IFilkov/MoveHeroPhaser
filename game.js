@@ -495,6 +495,11 @@ let dashCooldownDuration = 10000; // Кулдаун рывка в миллисе
 let normalSpeed = speed;
 let dashMultiplier = 5; // Ускорение скорости в 5 раз
 
+let circleBodyScore = 0;
+let enemy2Score = 0;
+let circleBodyScoreText;
+let enemy2ScoreText;
+
 function preload2() {
   // Загрузка необходимых ресурсов для сцены 2 (если есть)
 }
@@ -566,6 +571,15 @@ function create2() {
     null,
     this
   );
+
+  circleBodyScoreText = this.add.text(16, config.height - 40, "CircleBody: 0", {
+    fontSize: "32px",
+    fill: "#0000FF",
+  });
+  enemy2ScoreText = this.add.text(300, config.height - 40, "Enemy2: 0", {
+    fontSize: "32px",
+    fill: "#FF0000",
+  });
 }
 
 function update2(time, delta) {
@@ -729,17 +743,19 @@ function moveToNearestSpectatorForEnemy2() {
 
     // Проверка коллизии по расстоянию
     if (minDistance < 10) {
-      console.log("Check");
       // Если враг близко к зрителю
       nearestSpectator.clear();
       nearestSpectator.fillStyle(0x008080, 1); // Голубой цвет
       nearestSpectator.fillCircle(0, 0, 20);
+      // Увеличение очков для enemy2
+      enemy2Score += 1;
+      enemy2ScoreText.setText("Enemy2: " + enemy2Score);
       nearestSpectator.body.checkCollision.none = true; // Отключаем коллизию
     }
   }
 }
 
-function moveToNearestSpectator(forceMove = false) {
+function moveToNearestSpectator() {
   // Если нет зрителей на экране или все уже обработаны, ничего не делаем
   const remainingSpectators = spectatorsGroup
     .getChildren()
@@ -799,13 +815,13 @@ function moveToNearestSpectator(forceMove = false) {
     // Устанавливаем скорость в сторону ближайшего зрителя
     circleBody.body.setVelocity(velocityX, velocityY);
 
-    // Если forceMove = true, сразу переключаемся на следующего зрителя
-    if (forceMove) {
-      // Дождемся завершения движения к текущему ближайшему зрителю
-      circleBody.once("stopped", () => {
-        moveToNearestSpectator(false);
-      });
-    }
+    // // Если forceMove = true, сразу переключаемся на следующего зрителя
+    // if (forceMove) {
+    //   // Дождемся завершения движения к текущему ближайшему зрителю
+    //   circleBody.once("stopped", () => {
+    //     moveToNearestSpectator(false);
+    //   });
+    // }
   }
 }
 
@@ -830,6 +846,9 @@ function handleCollision(circleBody, spectator) {
   spectator.clear();
   spectator.fillStyle(0x800080, 1); // Фиолетовый цвет
   spectator.fillCircle(0, 0, 20); // Перерисовываем круг с новым цветом и тем же радиусом
+  // Увеличение очков для circleBody
+  circleBodyScore += 1;
+  circleBodyScoreText.setText("CircleBody: " + circleBodyScore);
   // Отключить коллизию с этим зрителем, чтобы не учитывать его в дальнейшем
   spectator.body.checkCollision.none = true;
 }
@@ -852,7 +871,11 @@ function spawnSpectator() {
   spectator.body.setCircle(radius, -radius, -radius);
 
   // Устанавливаем скорость движения зрителя вправо
-  const speed = 100;
+  // const speed = 100;
+
+  // Задаем случайную скорость
+  const speed = Phaser.Math.Between(80, 140);
+  spectator.body.setVelocityX(speed);
 
   spectatorsGroup.add(spectator); // Добавляем зрителя в группу
 
