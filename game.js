@@ -587,6 +587,15 @@ function create2() {
     this
   );
 
+  // Создание коллизий для circleBody и Enemy2
+  this.physics.add.collider(rectanglesGroup, circleBody, (rectangle) => {
+    handleRectangleCollision(rectangle, circleBody);
+  });
+
+  this.physics.add.collider(rectanglesGroup, enemy2, (rectangle) => {
+    handleRectangleCollision(rectangle, enemy2);
+  });
+
   circleBodyScoreText = this.add.text(16, config.height - 40, "CircleBody: 0", {
     fontSize: "32px",
     fill: "#0000FF",
@@ -597,10 +606,45 @@ function create2() {
   });
 }
 
+// function handleRectangleCollision(rectangle, target) {
+//   // Устанавливаем скорость целевого объекта в ту же, что и у rectangle
+//   target.body.setVelocity(rectangle.body.velocity.x, rectangle.body.velocity.y);
+
+//   // Перемещаем целевой объект до правого края экрана
+//   const rightEdge = config.width; // Ширина экрана
+//   if (target.x < rightEdge) {
+//     target.x += rectangle.body.velocity.x * 0.1; // Увеличиваем позицию по X
+//   }
+
+//   console.log(
+//     `Collision with rectangle, ${
+//       target === circleBody ? "circleBody" : "Enemy2"
+//     } is being pulled to the right.`
+//   );
+// }
+function handleRectangleCollision(rectangle, target) {
+  // Устанавливаем target в позицию rectangle
+  target.x = rectangle.x;
+
+  // Добавляем скорость для перемещения вместе с rectangle
+  target.body.setVelocity(rectangle.body.velocity.x, rectangle.body.velocity.y);
+}
+
 function update2(time, delta) {
   moveToNearestSpectatorForEnemy2.call(this);
   checkCollisionBetweenCircleBodyAndEnemy2();
   updateRectangles();
+
+  // Проверяем коллизии и обновляем позиции
+  rectanglesGroup.getChildren().forEach((rectangle) => {
+    if (isOverlapping(rectangle, circleBody)) {
+      handleRectangleCollision(rectangle, circleBody);
+    }
+
+    if (isOverlapping(rectangle, enemy2)) {
+      handleRectangleCollision(rectangle, enemy2);
+    }
+  });
 
   // Логика управления circleBody
   if (controlMode === "mouse") {
@@ -638,6 +682,20 @@ function update2(time, delta) {
   }
 }
 
+function isOverlapping(rectangle, target) {
+  const rectX = rectangle.x;
+  const rectY = rectangle.y;
+  const rectWidth = rectangle.width; // Предположим, что вы храните ширину
+  const rectHeight = rectangle.height; // Предположим, что вы храните высоту
+
+  return (
+    target.x < rectX + rectWidth &&
+    target.x + target.width > rectX &&
+    target.y < rectY + rectHeight &&
+    target.y + target.height > rectY
+  );
+}
+
 // Функция активации рывка
 function activateDash(currentTime) {
   if (!dashCooldown) {
@@ -660,27 +718,6 @@ function deactivateDash() {
 }
 
 // Логика движения
-// function moveToMouse(delta) {
-//   const dx = mousePos.x - circleBody.x;
-//   const dy = mousePos.y - circleBody.y;
-//   const angle = Math.atan2(dy, dx);
-
-//   circleBody.x += Math.cos(angle) * speed * (delta / 1000);
-//   circleBody.y += Math.sin(angle) * speed * (delta / 1000);
-// }
-// function moveToMouse(delta) {
-//   const dx = mousePos.x - circleBody.x;
-//   const dy = mousePos.y - circleBody.y;
-//   const distance = Math.sqrt(dx * dx + dy * dy);
-
-//   if (distance > 0) {
-//     const directionX = dx / distance;
-//     const directionY = dy / distance;
-
-//     circleBody.x += directionX * speed * (delta / 1000);
-//     circleBody.y += directionY * speed * (delta / 1000);
-//   }
-// }
 function moveToMouse(delta) {
   const dx = mousePos.x - circleBody.x;
   const dy = mousePos.y - circleBody.y;
@@ -699,20 +736,6 @@ function moveToMouse(delta) {
   }
 }
 
-// function moveWithGamepad(delta) {
-//   const axisX = gamepad.axes[0].getValue();
-//   const axisY = gamepad.axes[1].getValue();
-
-//   circleBody.x += axisX * speed * (delta / 1000);
-//   circleBody.y += axisY * speed * (delta / 1000);
-
-//   if (circleBody.x <= 0 || circleBody.x >= config.width) {
-//     direction.x *= -1;
-//   }
-//   if (circleBody.y <= 0 || circleBody.y >= config.height) {
-//     direction.y *= -1;
-//   }
-// }
 function moveWithGamepad(delta) {
   const axisX = gamepad.axes[0].getValue();
   const axisY = gamepad.axes[1].getValue();
@@ -1015,7 +1038,7 @@ function createRandomRectangle() {
   rectangle.fillRect(0, 0, 50, 20);
   rectangle.x = Phaser.Math.Between(0, 100); // Случайное положение по X (левая часть экрана)
   rectangle.y = Phaser.Math.Between(50, config.height - 50); // Случайное положение по Y
-  rectangle.speed = 400; // Скорость прямоугольника
+  rectangle.speed = 200; // Скорость прямоугольника
 
   // Добавляем прямоугольник в группу
   rectanglesGroup.add(rectangle);
@@ -1029,7 +1052,8 @@ function updateRectangles() {
   rectanglesGroup.getChildren().forEach((rectangle) => {
     // Перемещение вправо
     rectangle.x += rectangle.speed / 60; // Скорость перемещения без учета дельты времени
-
+    rectangle.body.immovable = true; // Делает rectangle "неподвижным"
+    rectangle.body.checkCollision.none = false;
     // Проверка на выход за экран
     if (rectangle.x > config.width) {
       rectangle.destroy(); // Удаляем прямоугольник, если он вышел за пределы экрана
@@ -1043,7 +1067,6 @@ function updateRectangles() {
         spectator.x,
         spectator.y
       );
-
       // Если прямоугольник слишком близко к зрителю, смещаем его, чтобы избежать коллизии
       if (distance < 50) {
         // Смещение прямоугольника в сторону, чтобы избежать коллизии
