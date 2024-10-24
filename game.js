@@ -660,13 +660,77 @@ function deactivateDash() {
 }
 
 // Логика движения
+// function moveToMouse(delta) {
+//   const dx = mousePos.x - circleBody.x;
+//   const dy = mousePos.y - circleBody.y;
+//   const angle = Math.atan2(dy, dx);
+
+//   circleBody.x += Math.cos(angle) * speed * (delta / 1000);
+//   circleBody.y += Math.sin(angle) * speed * (delta / 1000);
+// }
+// function moveToMouse(delta) {
+//   const dx = mousePos.x - circleBody.x;
+//   const dy = mousePos.y - circleBody.y;
+//   const distance = Math.sqrt(dx * dx + dy * dy);
+
+//   if (distance > 0) {
+//     const directionX = dx / distance;
+//     const directionY = dy / distance;
+
+//     circleBody.x += directionX * speed * (delta / 1000);
+//     circleBody.y += directionY * speed * (delta / 1000);
+//   }
+// }
 function moveToMouse(delta) {
   const dx = mousePos.x - circleBody.x;
   const dy = mousePos.y - circleBody.y;
-  const angle = Math.atan2(dy, dx);
+  const distance = Math.sqrt(dx * dx + dy * dy);
 
-  circleBody.x += Math.cos(angle) * speed * (delta / 1000);
-  circleBody.y += Math.sin(angle) * speed * (delta / 1000);
+  if (distance > 0) {
+    const directionX = dx / distance;
+    const directionY = dy / distance;
+
+    // Нормализуем вектор скорости
+    const velocityX = directionX * speed;
+    const velocityY = directionY * speed;
+
+    // Устанавливаем скорость для физического тела
+    circleBody.body.setVelocity(velocityX, velocityY);
+  }
+}
+
+// function moveWithGamepad(delta) {
+//   const axisX = gamepad.axes[0].getValue();
+//   const axisY = gamepad.axes[1].getValue();
+
+//   circleBody.x += axisX * speed * (delta / 1000);
+//   circleBody.y += axisY * speed * (delta / 1000);
+
+//   if (circleBody.x <= 0 || circleBody.x >= config.width) {
+//     direction.x *= -1;
+//   }
+//   if (circleBody.y <= 0 || circleBody.y >= config.height) {
+//     direction.y *= -1;
+//   }
+// }
+function moveWithGamepad(delta) {
+  const axisX = gamepad.axes[0].getValue();
+  const axisY = gamepad.axes[1].getValue();
+
+  // Вычисляем длину вектора (модуль)
+  const magnitude = Math.sqrt(axisX * axisX + axisY * axisY);
+
+  // Проверяем, что вектор не нулевой, чтобы избежать деления на 0
+  if (magnitude > 0) {
+    const normalizedX = axisX / magnitude;
+    const normalizedY = axisY / magnitude;
+
+    // Устанавливаем скорость для объекта с нормализованными значениями
+    circleBody.body.setVelocity(normalizedX * speed, normalizedY * speed);
+  } else {
+    // Останавливаем объект, если джойстик в центре
+    circleBody.body.setVelocity(0, 0);
+  }
 }
 
 function moveRandomly(time, delta) {
@@ -839,21 +903,6 @@ function moveToNearestSpectator() {
     //     moveToNearestSpectator(false);
     //   });
     // }
-  }
-}
-
-function moveWithGamepad(delta) {
-  const axisX = gamepad.axes[0].getValue();
-  const axisY = gamepad.axes[1].getValue();
-
-  circleBody.x += axisX * speed * (delta / 1000);
-  circleBody.y += axisY * speed * (delta / 1000);
-
-  if (circleBody.x <= 0 || circleBody.x >= config.width) {
-    direction.x *= -1;
-  }
-  if (circleBody.y <= 0 || circleBody.y >= config.height) {
-    direction.y *= -1;
   }
 }
 
