@@ -650,6 +650,9 @@ function handleRectangleCollision(rectangle, target) {
   if (target === circleBody) {
     circleBodySearching = false; // Остановить поиск
   }
+  if (target === enemy2) {
+    circleBodySearching = false; // Остановить поиск
+  }
 
   // Отталкиваем circleBody или Enemy2 в правую сторону
   target.body.setVelocity(400, 0);
@@ -673,6 +676,11 @@ function update2(time, delta) {
 
   // Проверка на достижение правого края экрана
   if (circleBody.x >= config.width - circleBody.width / 2) {
+    // Вернуть флаг поиска зрителей в активное состояние
+    circleBodySearching = true;
+  }
+
+  if (enemy2.x >= config.width - enemy2.width / 2) {
     // Вернуть флаг поиска зрителей в активное состояние
     circleBodySearching = true;
   }
@@ -750,6 +758,7 @@ function deactivateDash() {
 
 // Логика движения
 function moveToMouse(delta) {
+  if (!circleBodySearching) return; // Если флаг выключен, пропускаем поиск
   const dx = mousePos.x - circleBody.x;
   const dy = mousePos.y - circleBody.y;
   const distance = Math.sqrt(dx * dx + dy * dy);
@@ -768,6 +777,7 @@ function moveToMouse(delta) {
 }
 
 function moveWithGamepad(delta) {
+  if (!circleBodySearching) return; // Если флаг выключен, пропускаем поиск
   const axisX = gamepad.axes[0].getValue();
   const axisY = gamepad.axes[1].getValue();
 
@@ -822,6 +832,7 @@ let lastDashTimeEnemy2 = 0; // Время последнего ускорени�
 
 // Функция для перемещения Enemy2 к ближайшему зрителю
 function moveToNearestSpectatorForEnemy2() {
+  if (!circleBodySearching) return; // Если флаг выключен, пропускаем поиск
   const remainingSpectators = spectatorsGroup
     .getChildren()
     .filter((spectator) => !spectator.body.checkCollision.none);
