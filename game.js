@@ -1113,8 +1113,13 @@ function updateRectangles() {
       // Если прямоугольник слишком близко к зрителю, смещаем его, чтобы избежать коллизии
       if (distance < 50) {
         // Смещение прямоугольника в сторону, чтобы избежать коллизии
-        rectangle.y += 20;
+        // rectangle.y += 20;
+        const direction = Math.random() < 0.5 ? -1 : 1;
+
+        // Смещаем rectangle вверх или вниз на 20 пикселей
+        rectangle.y += 20 * direction;
       }
     });
   });
 }
+// rectangle.y = Phaser.Math.Between(20, config.height - 20); // Случайное перемещение по Y
