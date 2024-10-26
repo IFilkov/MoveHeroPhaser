@@ -985,22 +985,45 @@ function handleCollision(circleBody, spectator) {
   spectator.body.checkCollision.none = true;
 }
 
-// function collisionDirection() {
-//   const circleBodyBounds = new Phaser.Geom.Circle(circleBody.x, circleBody.y, circleBody.radius);
-//     const enemy2Bounds = new Phaser.Geom.Circle(enemy2.x, enemy2.y, enemy2.radius);
+// Пересечение circleBody c enemy2
+// function checkCollisionBetweenCircleBodyAndEnemy2() {
+//   // Определяем границы окружностей для столкновения
+//   const circleBodyBounds = new Phaser.Geom.Circle(
+//     circleBody.x,
+//     circleBody.y,
+//     circleBody.radius
+//   );
+//   const enemy2Bounds = new Phaser.Geom.Circle(
+//     enemy2.x,
+//     enemy2.y,
+//     enemy2.radius
+//   );
 
-//     // Проверяем пересечение окружностей circleBody и Enemy2
-//     if (Phaser.Geom.Intersects.CircleToCircle(circleBodyBounds, enemy2Bounds)) {
-//       console.log("HIT!");
-//       // Дополнительная логика при коллизии может быть добавлена здесь
+//   // Проверяем пересечение окружностей circleBody и Enemy2
+//   if (Phaser.Geom.Intersects.CircleToCircle(circleBodyBounds, enemy2Bounds)) {
+//     console.log("HIT!");
+
+//     // Вычисляем направление отскока
+//     const dx = circleBody.x - enemy2.x;
+//     const dy = circleBody.y - enemy2.y;
+//     const distance = Math.sqrt(dx * dx + dy * dy);
+
+//     if (distance > 0) {
+//       // Проверяем, чтобы избежать деления на ноль
+//       // Нормализуем вектор направления
+//       const normX = dx / distance;
+//       const normY = dy / distance;
+
+//       // Устанавливаем скорости в противоположных направлениях для отскока
+//       const randomSpeed1 = Phaser.Math.Between(80, 200);
+//       const randomSpeed2 = Phaser.Math.Between(80, 200);
+
+//       circleBody.body.setVelocity(normX * randomSpeed1, normY * randomSpeed1);
+//       enemy2.body.setVelocity(-normX * randomSpeed2, -normY * randomSpeed2);
 //     }
-//   // // Отправляем объекты в противоположные направления
-//   // circleBody.body.setVelocity(-Math.cos(angle) * 200, -Math.sin(angle) * 200);
-//   // enemy2.body.setVelocity(Math.cos(angle) * 200, Math.sin(angle) * 200);
+//   }
 // }
 function checkCollisionBetweenCircleBodyAndEnemy2() {
-  const randomSpeed = Phaser.Math.Between(80, 200);
-
   const circleBodyBounds = new Phaser.Geom.Circle(
     circleBody.x,
     circleBody.y,
@@ -1015,8 +1038,28 @@ function checkCollisionBetweenCircleBodyAndEnemy2() {
   // Проверяем пересечение окружностей circleBody и Enemy2
   if (Phaser.Geom.Intersects.CircleToCircle(circleBodyBounds, enemy2Bounds)) {
     console.log("HIT!");
-    circleBody.body.setVelocity(randomSpeed);
-    enemy2.body.setVelocity(randomSpeed);
+
+    const dx = circleBody.x - enemy2.x;
+    const dy = circleBody.y - enemy2.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance > 0) {
+      const normX = dx / distance;
+      const normY = dy / distance;
+
+      // Увеличиваем величину отскока
+      const bounceMultiplier = 20; // Настраиваем коэффициент отскока
+      const baseSpeed = Phaser.Math.Between(80, 200);
+
+      const velocityX1 = normX * baseSpeed * bounceMultiplier;
+      const velocityY1 = normY * baseSpeed * bounceMultiplier;
+      const velocityX2 = -normX * baseSpeed * bounceMultiplier;
+      const velocityY2 = -normY * baseSpeed * bounceMultiplier;
+
+      // Устанавливаем скорости для отскока
+      circleBody.body.setVelocity(velocityX1, velocityY1);
+      enemy2.body.setVelocity(velocityX2, velocityY2);
+    }
   }
 }
 
@@ -1122,4 +1165,3 @@ function updateRectangles() {
     });
   });
 }
-// rectangle.y = Phaser.Math.Between(20, config.height - 20); // Случайное перемещение по Y
