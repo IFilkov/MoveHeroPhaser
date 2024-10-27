@@ -465,21 +465,23 @@ function checkForWinner() {
         winnerText = "Draw!";
       }
 
-      // Очищаем экран и выводим текст победителя
-      this.cameras.main.fadeOut(1000); // Мягкое затемнение экрана
-      this.time.delayedCall(1000, () => {
-        this.cameras.main.fadeIn(1000);
-        const winnerMessage = this.add.text(
-          config.width / 2,
-          config.height / 2,
-          winnerText,
-          { fontSize: "64px", fill: "#0000ff" }
-        );
-        winnerMessage.setOrigin(0.5, 0.5);
-        // Запуск следующей сцены через 5 секунд
-        this.time.delayedCall(5000, () => {
-          this.scene.start("Scene2"); // Переход на сцену 2
-          // console.log("Scene 2 actived");
+      // Запуск следующей сцены через 5 секунд
+      this.time.delayedCall(50000, () => {
+        // Очищаем экран и выводим текст победителя
+        this.cameras.main.fadeOut(1000); // Мягкое затемнение экрана
+        this.time.delayedCall(1000, () => {
+          this.cameras.main.fadeIn(1000);
+          const winnerMessage = this.add.text(
+            config.width / 2,
+            config.height / 2,
+            winnerText,
+            { fontSize: "64px", fill: "#0000ff" }
+          );
+          winnerMessage.setOrigin(0.5, 0.5);
+          this.time.delayedCall(5000, () => {
+            this.scene.start("Scene2"); // Переход на сцену 2
+            // console.log("Scene 2 actived");
+          });
         });
       });
     }
@@ -687,9 +689,9 @@ function update2(time, delta) {
 
   // Логика управления circleBody
   if (controlMode === "mouse") {
-    moveToMouse(delta);
+    moveToMouseScene2(delta);
   } else if (controlMode === "gamepad" && gamepad) {
-    moveWithGamepad(delta);
+    moveWithGamepadScene2(delta);
   } else {
     // moveRandomly(time, delta);
     moveToNearestSpectator.call(this);
@@ -757,7 +759,7 @@ function deactivateDash() {
 }
 
 // Логика движения
-function moveToMouse(delta) {
+function moveToMouseScene2(delta) {
   if (!circleBodySearching) return; // Если флаг выключен, пропускаем поиск
   const dx = mousePos.x - circleBody.x;
   const dy = mousePos.y - circleBody.y;
@@ -776,7 +778,7 @@ function moveToMouse(delta) {
   }
 }
 
-function moveWithGamepad(delta) {
+function moveWithGamepadScene2(delta) {
   if (!circleBodySearching) return; // Если флаг выключен, пропускаем поиск
   const axisX = gamepad.axes[0].getValue();
   const axisY = gamepad.axes[1].getValue();
