@@ -672,13 +672,21 @@ function handleRectangleCollision(rectangle, target) {
 // }
 
 function update2(time, delta) {
-  if (gameOver) {
-    this.time.delayedCall(5000, () => {
-      this.scene.start("Scene3"); // Имя следующей сцены
-      return; // Остановить дальнейшее выполнение функции update2
-    });
-    // checkGameOver();
-  }
+  // if (gameOver) {
+  //   this.time.delayedCall(5000, () => {
+  //     this.scene.start("Scene3"); // Имя следующей сцены
+  //     return; // Остановить дальнейшее выполнение функции update2
+  //   });
+  //   // checkGameOver();
+  // }
+  // if (gameOver) {
+  //   this.time.delayedCall(50000, () => {
+  //     this.cameras.main.fadeOut(1000);
+  //     // Запускаем мягкое затемнение экрана
+  //     // Слушаем завершение fadeOut, после чего меняем сцену
+  //   });
+  //   this.scene.start("Scene3");
+  // }
   // Проверяем наличие this перед вызовом checkGameOver
   console.log("Scene in update2:", this);
   checkGameOver(this);
@@ -1143,55 +1151,239 @@ function updateRectangles() {
     });
   });
 }
-function handleSpectatorCollision(target) {
-  // Проверка на победителя
-  if (circleBodyScore >= 20 || enemy2Score >= 20) {
+function handleSpectatorCollision() {
+  //Проверка на победителя
+  if (circleBodyScore >= 2 || enemy2Score >= 2) {
     gameOver = true;
-    const winner = circleBodyScore >= 20 ? "CircleBody" : "Enemy2";
+    const winner = circleBodyScore >= 2 ? "CircleBody" : "Enemy2";
     showWinnerAndTransition(winner);
   }
 }
 
-// function showWinnerAndTransition(winner, scene) {
-//   if (!scene) {
-//     console.error("Scene is not defined");
-//     return;
-//   }
-//   scene.winnerText.setText(`${winner} Wins!`);
-//   scene.time.delayedCall(5000, () => {
-//     scene.scene.start("Scene1"); // Переход на следующую сцену
-//     console.log("Scene1 activated");
-//   });
-// }
 function checkGameOver(scene) {
-  if (circleBodyScore >= 10 || enemy2Score >= 10) {
+  if (circleBodyScore >= 2 || enemy2Score >= 2) {
+    scene.cameras.main.fadeOut(500);
     gameOver = true;
-    const winner = circleBodyScore >= 10 ? "CircleBody" : "Enemy2";
-    showWinnerAndTransition(winner, scene);
+    const winner = circleBodyScore >= 2 ? "CircleBody" : "Enemy2";
+
+    scene.time.delayedCall(5000, () => {
+      scene.cameras.main.fadeOut(1000);
+      scene.time.delayedCall(1000, () => {
+        scene.cameras.main.fadeIn(1000);
+        showWinnerAndTransition(winner, scene);
+        scene.time.delayedCall(1000, () => {
+          scene.scene.start("Scene3");
+        });
+      });
+    });
   }
 }
 
 function showWinnerAndTransition(winner, scene) {
-  // Отладка, чтобы проверить, что scene передается корректно
-  // console.log("Scene object in showWinnerAndTransition:", scene);
-  // console.log("scene.time object:", scene.time);
-
-  // if (!scene.time) {
-  //   console.error(
-  //     "scene.time is undefined. Ensure the scene is properly initialized."
-  //   );
-  //   return;
-  // }
   winnerText.setText(`${winner} Wins!`);
   winnerText.setVisible(true);
-  // Переход с использованием scene.time.delayedCall
-  scene.time.delayedCall(5000, () => {
-    scene.scene.start("Scene3"); // Укажите имя следующей сцены
-  });
+}
+
+function createRoadLines(scene) {
+  const lineWidth = 6; // ширина линий
+  const roadMargin = 300; // отступ от края экрана до линий
+
+  // Левая линия
+  scene.add.rectangle(
+    roadMargin,
+    scene.scale.height / 2,
+    lineWidth,
+    scene.scale.height,
+    0x000000 // цвет линии (черный)
+  );
+
+  // Правая линия
+  scene.add.rectangle(
+    scene.scale.width - roadMargin,
+    scene.scale.height / 2,
+    lineWidth,
+    scene.scale.height,
+    0x000000 // цвет линии (черный)
+  );
 }
 
 function preload3() {}
-function create3() {}
-function update3() {
+function create3() {
+  this.cameras.main.fadeOut(1000);
+  this.cameras.main.fadeIn(1000);
   console.log("Scene3 active");
+  createRoadLines(this); // вызываем функцию для отрисовки линий
+  // Создание объекта circleBody и прочая инициализация
+  circleBody = this.add.circle(
+    config.width / 2,
+    config.height / 2,
+    10,
+    0x000000
+  );
+  this.physics.add.existing(circleBody);
+  circleBody.body.setCollideWorldBounds(true);
+  circleBody.body.setBounce(1, 1);
+
+  this.input.on("pointermove", (pointer) => {
+    mousePos.x = pointer.x;
+    mousePos.y = pointer.y;
+  });
+
+  this.input.gamepad.on("connected", (pad) => {
+    gamepad = pad;
+    console.log("Gamepad connected:", gamepad);
+  });
+
+  if (this.input.gamepad.total > 0) {
+    gamepad = this.input.gamepad.getPad(0);
+  }
+
+  this.input.keyboard.on("keydown-SPACE", () => {
+    if (controlMode === "autopilot") {
+      controlMode = "mouse";
+    } else {
+      controlMode = "autopilot";
+    }
+  });
+
+  // Обработка средней кнопки мыши для активации рывка
+  this.input.on("pointerdown", (pointer) => {
+    if (pointer.middleButtonDown()) {
+      activateDash(this.time.now);
+    }
+  });
+
+  // Включаем физику
+  this.physics.world.setBounds(0, 0, config.width, config.height);
 }
+function update3(time, delta) {
+  // Логика управления circleBody
+  if (controlMode === "mouse") {
+    moveToMouseScene3(delta);
+  } else if (controlMode === "gamepad" && gamepad) {
+    moveWithGamepadScene3(delta);
+  } else {
+    moveRandomly(time, delta);
+    // moveToNearestSpectator.call(this);
+  }
+
+  // Проверяем нажатие кнопки A на геймпаде для переключения между геймпадом и автопилотом
+  if (gamepad && gamepad.buttons[0].pressed && !isButtonPressed) {
+    // Кнопка A на геймпаде
+    isButtonPressed = true; // Отмечаем, что кнопка нажата
+    if (controlMode === "autopilot") {
+      controlMode = "gamepad";
+    } else {
+      controlMode = "autopilot";
+    }
+  }
+
+  // Сбрасываем флаг, если кнопка A отпущена
+  if (gamepad && !gamepad.buttons[0].pressed) {
+    isButtonPressed = false;
+  }
+  // Проверка кнопки B на геймпаде для активации рывка
+  if (gamepad && gamepad.buttons[1].pressed && !dashActive && !dashCooldown) {
+    activateDash(time);
+  }
+
+  // Логика завершения рывка через одну секунду
+  if (dashActive && time - dashStartTime > dashDuration) {
+    deactivateDash();
+  }
+}
+
+// Функция активации рывка
+function activateDash(currentTime) {
+  if (!dashCooldown) {
+    dashActive = true;
+    dashStartTime = currentTime;
+    speed = normalSpeed * dashMultiplier; // Увеличиваем скорость в 5 раз
+    dashCooldown = true;
+
+    // Устанавливаем таймер на отключение кулдауна через 10 секунд
+    setTimeout(() => {
+      dashCooldown = false;
+    }, dashCooldownDuration);
+  }
+}
+
+// Функция деактивации рывка
+function deactivateDash() {
+  dashActive = false;
+  speed = normalSpeed; // Возвращаем обычную скорость
+}
+
+// Логика движения
+function moveToMouseScene3(delta) {
+  if (!circleBodySearching) return; // Если флаг выключен, пропускаем поиск
+  const dx = mousePos.x - circleBody.x;
+  const dy = mousePos.y - circleBody.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+
+  if (distance > 0) {
+    const directionX = dx / distance;
+    const directionY = dy / distance;
+
+    // Нормализуем вектор скорости
+    const velocityX = directionX * speed;
+    const velocityY = directionY * speed;
+
+    // Устанавливаем скорость для физического тела
+    circleBody.body.setVelocity(velocityX, velocityY);
+  }
+}
+
+function moveWithGamepadScene3(delta) {
+  if (!circleBodySearching) return; // Если флаг выключен, пропускаем поиск
+  const axisX = gamepad.axes[0].getValue();
+  const axisY = gamepad.axes[1].getValue();
+
+  // Вычисляем длину вектора (модуль)
+  const magnitude = Math.sqrt(axisX * axisX + axisY * axisY);
+
+  // Проверяем, что вектор не нулевой, чтобы избежать деления на 0
+  if (magnitude > 0) {
+    const normalizedX = axisX / magnitude;
+    const normalizedY = axisY / magnitude;
+
+    // Устанавливаем скорость для объекта с нормализованными значениями
+    circleBody.body.setVelocity(normalizedX * speed, normalizedY * speed);
+  } else {
+    // Останавливаем объект, если джойстик в центре
+    circleBody.body.setVelocity(0, 0);
+  }
+}
+
+function moveRandomly(time, delta) {
+  if (
+    !targetSpectator ||
+    time - lastDirectionChange > changeDirectionTime ||
+    targetSpectatorReached()
+  ) {
+    targetSpectator = getNewRandomSpectator();
+    lastDirectionChange = time;
+  }
+
+  if (targetSpectator) {
+    const dx = targetSpectator.x - circleBody.x;
+    const dy = targetSpectator.y - circleBody.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance > 1) {
+      const angle = Math.atan2(dy, dx);
+      circleBody.x += Math.cos(angle) * speed * (delta / 1000);
+      circleBody.y += Math.sin(angle) * speed * (delta / 1000);
+    } else {
+      targetSpectator = getNewRandomSpectator();
+    }
+  }
+}
+
+// let baseSpeed = 150; // Базовая скорость
+// let speed2 = baseSpeed; // Текущая скорость
+// let lastDashTime = 0; // Время последнего ускорения
+
+// let baseSpeedEnemy2 = 190; // Базовая скорость
+// let speedEnemy2 = baseSpeed; // Текущая скорость
+// let lastDashTimeEnemy2 = 0; // Время последнего ускорения
