@@ -1225,22 +1225,95 @@ function spawnPiople(scene) {
 
 // Функция для обработки коллизий
 // function handlePiopleCollision(piople, scene) {
-//   piople.body.setVelocityY(0); // Останавливаем piople
+//   if (!piople.isStopped) {
+//     piople.isStopped = true; // Помечаем piople как остановленный
+//     piople.body.setVelocityY(0); // Останавливаем piople
+
+//     // Таймер для возобновления движения
+//     scene.time.delayedCall(2000, () => {
+//       piople.body.setVelocityY(piopleSpeed); // Возобновляем движение через 2 секунды
+//       piople.isStopped = false; // Сбрасываем флаг остановки
+//     });
+//   }
+// }
+// function handlePiopleCollision(piople, scene) {
+//   // Останавливаем piople
+//   piople.body.setVelocityY(0);
+
+//   // Устанавливаем двухсекундную задержку
 //   scene.time.delayedCall(2000, () => {
-//     piople.body.setVelocityY(piopleSpeed); // Возобновляем движение через 2 секунды
+//     // Случайное решение: либо продолжать движение вниз, либо занять место слева
+//     const shouldTakeSpot = Math.random() < 0.5;
+
+//     if (shouldTakeSpot) {
+//       // Пытаемся найти первое свободное место слева
+//       const freeSpot = reservedSpotsLeft.find((spot) => !spot.occupied);
+
+//       if (freeSpot) {
+//         // Перемещаем piople на место и отмечаем его как занятое
+//         piople.x = freeSpot.x;
+//         piople.y = freeSpot.y;
+//         piople.body.setVelocity(0); // Останавливаем piople
+//         piople.setFillStyle(0x0000ff); // Меняем цвет на синий
+//         freeSpot.occupied = true;
+//       } else {
+//         // Если свободных мест нет, продолжаем движение вниз
+//         piople.body.setVelocityY(piopleSpeed);
+//       }
+//     } else {
+//       // Если выбрано продолжение движения вниз
+//       piople.body.setVelocityY(piopleSpeed);
+//     }
 //   });
 // }
 function handlePiopleCollision(piople, scene) {
-  if (!piople.isStopped) {
-    piople.isStopped = true; // Помечаем piople как остановленный
-    piople.body.setVelocityY(0); // Останавливаем piople
+  // Останавливаем piople на 2 секунды
+  piople.body.setVelocity(0);
 
-    // Таймер для возобновления движения
-    scene.time.delayedCall(2000, () => {
-      piople.body.setVelocityY(piopleSpeed); // Возобновляем движение через 2 секунды
-      piople.isStopped = false; // Сбрасываем флаг остановки
-    });
-  }
+  // Двухсекундная задержка перед выбором действия
+  scene.time.delayedCall(2000, () => {
+    const shouldTakeSpot = Math.random() < 0.5;
+
+    if (shouldTakeSpot) {
+      // Ищем первое свободное место слева
+      const freeSpot = reservedSpotsLeft.find((spot) => !spot.occupied);
+
+      if (freeSpot) {
+        // Вычисляем направление к свободному месту
+        const dx = freeSpot.x - piople.x;
+        const dy = freeSpot.y - piople.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        // Задаем скорость в направлении к свободному месту
+        const velocityX = (dx / distance) * piopleSpeed;
+        const velocityY = (dy / distance) * piopleSpeed;
+
+        piople.body.setVelocity(velocityX, velocityY);
+        piople.setFillStyle(0x0000ff); // Меняем цвет на синий
+
+        // Обновляем статус, когда piople достигает места
+        const checkArrival = scene.time.addEvent({
+          delay: 50,
+          callback: () => {
+            const reachedX = Math.abs(piople.x - freeSpot.x) < 2;
+            const reachedY = Math.abs(piople.y - freeSpot.y) < 2;
+            if (reachedX && reachedY) {
+              piople.body.setVelocity(0); // Останавливаем piople
+              freeSpot.occupied = true; // Занимаем место
+              checkArrival.remove(); // Очищаем событие
+            }
+          },
+          loop: true,
+        });
+      } else {
+        // Если свободных мест нет, продолжаем движение вниз
+        piople.body.setVelocityY(piopleSpeed);
+      }
+    } else {
+      // Если выбрано продолжить движение вниз
+      piople.body.setVelocityY(piopleSpeed);
+    }
+  });
 }
 // Вызов этой функции внутри update3 для проверки коллизий
 function checkCollisions(scene) {
@@ -1251,27 +1324,6 @@ function checkCollisions(scene) {
   });
 }
 
-// const topMargin = 50; // Отступ от верхней границы экрана
-// const rowSpacing = 30; // Расстояние между кружками по вертикали
-// const numCirclesPerColumn = 200;
-// const reservedSpots = []; // Массив для хранения серых кружков
-
-// function createReservedSpots(scene) {
-//   for (let i = 0; i < numCirclesPerColumn; i++) {
-//     const x1 = 50; // Горизонтальная позиция для первого ряда
-//     const x2 = 80; // Горизонтальная позиция для второго ряда
-//     const y = topMargin + i * rowSpacing; // Расстояние между кружками по вертикали
-
-//     // Создаем серые кружки для первого и второго столбцов
-//     const reservedSpot1 = scene.add.circle(x1, y, 10, 0x808080);
-//     reservedSpot1.occupied = false;
-//     reservedSpots.push(reservedSpot1);
-
-//     const reservedSpot2 = scene.add.circle(x2, y, 10, 0x808080);
-//     reservedSpot2.occupied = false;
-//     reservedSpots.push(reservedSpot2);
-//   }
-// }
 const topMargin = 50; // Отступ от верхней границы экрана
 const rowSpacing = 30; // Расстояние между кружками по вертикали
 const numCirclesPerColumn = 20; // Число кружков в каждом ряду
