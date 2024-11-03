@@ -1251,11 +1251,70 @@ function checkCollisions(scene) {
   });
 }
 
+// const topMargin = 50; // Отступ от верхней границы экрана
+// const rowSpacing = 30; // Расстояние между кружками по вертикали
+// const numCirclesPerColumn = 200;
+// const reservedSpots = []; // Массив для хранения серых кружков
+
+// function createReservedSpots(scene) {
+//   for (let i = 0; i < numCirclesPerColumn; i++) {
+//     const x1 = 50; // Горизонтальная позиция для первого ряда
+//     const x2 = 80; // Горизонтальная позиция для второго ряда
+//     const y = topMargin + i * rowSpacing; // Расстояние между кружками по вертикали
+
+//     // Создаем серые кружки для первого и второго столбцов
+//     const reservedSpot1 = scene.add.circle(x1, y, 10, 0x808080);
+//     reservedSpot1.occupied = false;
+//     reservedSpots.push(reservedSpot1);
+
+//     const reservedSpot2 = scene.add.circle(x2, y, 10, 0x808080);
+//     reservedSpot2.occupied = false;
+//     reservedSpots.push(reservedSpot2);
+//   }
+// }
+const topMargin = 50; // Отступ от верхней границы экрана
+const rowSpacing = 30; // Расстояние между кружками по вертикали
+const numCirclesPerColumn = 20; // Число кружков в каждом ряду
+const leftColumnXPositions = [50, 80, 110, 140, 170, 200]; // Позиции x для левых рядов
+const rightColumnXPositions = [
+  config.width - 50,
+  config.width - 80,
+  config.width - 110,
+  config.width - 140,
+  config.width - 170,
+  config.width - 200,
+]; // Позиции x для правых рядов
+const reservedSpotsLeft = []; // Массив для хранения серых кружков слева
+const reservedSpotsRight = []; // Массив для хранения серых кружков справа
+
+function createReservedSpots(scene) {
+  // Создаем ряды слева
+  leftColumnXPositions.forEach((xPos) => {
+    for (let i = 0; i < numCirclesPerColumn; i++) {
+      const y = topMargin + i * rowSpacing;
+      const reservedSpot = scene.add.circle(xPos, y, 10, 0x808080);
+      reservedSpot.occupied = false;
+      reservedSpotsLeft.push(reservedSpot);
+    }
+  });
+
+  // Создаем ряды справа
+  rightColumnXPositions.forEach((xPos) => {
+    for (let i = 0; i < numCirclesPerColumn; i++) {
+      const y = topMargin + i * rowSpacing;
+      const reservedSpot = scene.add.circle(xPos, y, 10, 0x808080);
+      reservedSpot.occupied = false;
+      reservedSpotsRight.push(reservedSpot);
+    }
+  });
+}
+
 function preload3() {}
 function create3() {
   this.cameras.main.fadeOut(1000);
   this.cameras.main.fadeIn(1000);
   console.log("Scene3 active");
+  createReservedSpots(this); // Создаем ряды серых кружков
   createRoadLines(this); // вызываем функцию для отрисовки линий
   // Создание объекта circleBody и прочая инициализация
   circleBody = this.add.circle(
