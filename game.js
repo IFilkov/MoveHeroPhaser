@@ -1184,9 +1184,10 @@ function showWinnerAndTransition(winner, scene) {
   winnerText.setVisible(true);
 }
 
+// Scene3
+const roadMargin = 300; // отступ от края экрана до линий
 function createRoadLines(scene) {
   const lineWidth = 6; // ширина линий
-  const roadMargin = 300; // отступ от края экрана до линий
 
   // Левая линия
   scene.add.rectangle(
@@ -1205,6 +1206,49 @@ function createRoadLines(scene) {
     scene.scale.height,
     0x000000 // цвет линии (черный)
   );
+}
+
+let pioples = []; // Массив для хранения pioples
+const piopleSpeed = 100; // Скорость pioples (можно регулировать по необходимости)
+
+// Функция для появления нового piople
+function spawnPiople(scene) {
+  const xPosition = Phaser.Math.Between(
+    roadMargin,
+    scene.scale.width - roadMargin
+  );
+  const piople = scene.add.circle(xPosition, 0, 10, 0x00ff00); // Зеленый круг
+  scene.physics.add.existing(piople);
+  piople.body.setVelocityY(piopleSpeed); // Устанавливаем вертикальную скорость
+  pioples.push(piople); // Добавляем в массив
+}
+
+// Функция для обработки коллизий
+// function handlePiopleCollision(piople, scene) {
+//   piople.body.setVelocityY(0); // Останавливаем piople
+//   scene.time.delayedCall(2000, () => {
+//     piople.body.setVelocityY(piopleSpeed); // Возобновляем движение через 2 секунды
+//   });
+// }
+function handlePiopleCollision(piople, scene) {
+  if (!piople.isStopped) {
+    piople.isStopped = true; // Помечаем piople как остановленный
+    piople.body.setVelocityY(0); // Останавливаем piople
+
+    // Таймер для возобновления движения
+    scene.time.delayedCall(2000, () => {
+      piople.body.setVelocityY(piopleSpeed); // Возобновляем движение через 2 секунды
+      piople.isStopped = false; // Сбрасываем флаг остановки
+    });
+  }
+}
+// Вызов этой функции внутри update3 для проверки коллизий
+function checkCollisions(scene) {
+  pioples.forEach((piople) => {
+    if (Phaser.Geom.Intersects.CircleToCircle(circleBody, piople)) {
+      handlePiopleCollision(piople, scene);
+    }
+  });
 }
 
 function preload3() {}
@@ -1255,8 +1299,16 @@ function create3() {
 
   // Включаем физику
   this.physics.world.setBounds(0, 0, config.width, config.height);
+
+  createRoadLines(this);
+  this.time.addEvent({
+    delay: 2000, // Интервал появления (можно регулировать)
+    callback: () => spawnPiople(this),
+    loop: true,
+  });
 }
 function update3(time, delta) {
+  checkCollisions(this);
   // Логика управления circleBody
   if (controlMode === "mouse") {
     moveToMouseScene3(delta);
@@ -1291,6 +1343,14 @@ function update3(time, delta) {
   if (dashActive && time - dashStartTime > dashDuration) {
     deactivateDash();
   }
+
+  // Перемещаем каждый объект в массиве вниз по экрану
+  pioples.forEach((piople, index) => {
+    if (piople.y > config.height) {
+      piople.destroy(); // Удаляем объект, если он вышел за пределы экрана
+      pioples.splice(index, 1); // Убираем из массива
+    }
+  });
 }
 
 // Функция активации рывка
@@ -1316,7 +1376,7 @@ function deactivateDash() {
 
 // Логика движения
 function moveToMouseScene3(delta) {
-  if (!circleBodySearching) return; // Если флаг выключен, пропускаем поиск
+  // if (!circleBodySearching) return; // Если флаг выключен, пропускаем поиск
   const dx = mousePos.x - circleBody.x;
   const dy = mousePos.y - circleBody.y;
   const distance = Math.sqrt(dx * dx + dy * dy);
@@ -1335,7 +1395,7 @@ function moveToMouseScene3(delta) {
 }
 
 function moveWithGamepadScene3(delta) {
-  if (!circleBodySearching) return; // Если флаг выключен, пропускаем поиск
+  // if (!circleBodySearching) return; // Если флаг выключен, пропускаем поиск
   const axisX = gamepad.axes[0].getValue();
   const axisY = gamepad.axes[1].getValue();
 
