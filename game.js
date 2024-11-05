@@ -1448,148 +1448,23 @@ function moveToClosestPiople(circleBody, pioples, speed) {
   }
 }
 
-// let currentTarget = null; // для хранения текущего целевого piople
-// let ignorePiople = null; // Глобальная переменная для игнорирования piople на время
-let circleBodySpeed = 200;
+// let circleBodySpeed = 200;
 
-// function moveToNearestPiople(circleBody, pioples) {
-//   // Ищем ближайшего piople
-//   let nearestPiople = null;
-//   let nearestDistance = Infinity;
+// Переменная для отслеживания задержки
+let isCircleBodyDelayed = false;
 
-//   pioples.forEach((piople) => {
-//     if (piople !== ignorePiople) { // Пропускаем игнорируемого piople
-//       const distance = Phaser.Math.Distance.Between(
-//         circleBody.x,
-//         circleBody.y,
-//         piople.x,
-//         piople.y
-//       );
+// Функция для обработки задержки при коллизии
+function delayAfterCollision(circleBody, scene) {
+  isCircleBodyDelayed = true;
+  circleBody.body.setVelocity(0); // Останавливаем движение
 
-//       if (distance < nearestDistance) {
-//         nearestDistance = distance;
-//         nearestPiople = piople;
-//       }
-//     }
-//   });
+  // Устанавливаем таймер на 1 секунду
+  circleBody.scene.time.delayedCall(200, () => {
+    isCircleBodyDelayed = false; // Снимаем задержку через 1 секунду
+  });
+}
 
-//   // Если найден ближайший piople, перемещаемся к нему
-//   if (nearestPiople) {
-//     const dx = nearestPiople.x - circleBody.x;
-//     const dy = nearestPiople.y - circleBody.y;
-//     const distance = Math.sqrt(dx * dx + dy * dy);
-//     circleBody.setVelocity((dx / distance) * circleBodySpeed, (dy / distance) * circleBodySpeed);
-//   }
-// }
-// Функция для поиска ближайшего piople и перемещения circleBody к нему
-// function updateTargetPiople(scene) {
-//   let closestPiople = null;
-//   let closestDistance = Infinity;
-
-//   pioples.forEach((piople) => {
-//     if (!Phaser.Geom.Intersects.CircleToCircle(circleBody, piople)) {
-//       const distance = Phaser.Math.Distance.Between(
-//         circleBody.x,
-//         circleBody.y,
-//         piople.x,
-//         piople.y
-//       );
-//       if (distance < closestDistance) {
-//         closestPiople = piople;
-//         closestDistance = distance;
-//       }
-//     }
-//   });
-
-//   if (closestPiople) {
-//     // Рассчитываем направление к ближайшему piople и задаем скорость для circleBody
-//     const dx = closestPiople.x - circleBody.x;
-//     const dy = closestPiople.y - circleBody.y;
-//     const distance = Math.sqrt(dx * dx + dy * dy);
-
-//     circleBody.body.setVelocity(
-//       (dx / distance) * circleBodySpeed,
-//       (dy / distance) * circleBodySpeed
-//     );
-//   }
-// }
-// let lastCollisionTime = 0; // Время последней коллизии
-// // Массив для хранения уже достигнутых pioples
-// let collidedPioples = [];
-
-// // Функция для обновления цели piople
-// function updateTargetPiople() {
-//   // Таймер на переключение после коллизии
-
-//   let nearestPiople = null;
-//   let minDistance = Infinity;
-
-//   // Поиск ближайшего piople, исключая те, с которыми уже была коллизия
-//   pioples.forEach((piople) => {
-//     if (!collidedPioples.includes(piople)) {
-//       // исключаем уже достигнутых
-//       const distance = Phaser.Math.Distance.Between(
-//         circleBody.x,
-//         circleBody.y,
-//         piople.x,
-//         piople.y
-//       );
-
-//       if (distance < minDistance) {
-//         minDistance = distance;
-//         nearestPiople = piople;
-//       }
-//     }
-//   });
-
-//   // Назначаем новую цель, если такая найдена
-//   if (nearestPiople) {
-//     targetPiople = nearestPiople;
-//   } else {
-//     // Очищаем список после полного обхода, чтобы круг возобновил работу
-//     collidedPioples = [];
-//   }
-// }
-
-// Функция для поиска ближайшего piople и перемещения circleBody к нему
-// function updateTargetPiople(scene, time) {
-//   // Проверка, прошла ли секунда с момента последней коллизии
-//   if (time - lastCollisionTime < 1000) {
-//     return;
-//   }
-
-//   let closestPiople = null;
-//   let closestDistance = Infinity;
-
-//   pioples.forEach((piople) => {
-//     if (!Phaser.Geom.Intersects.CircleToCircle(circleBody, piople)) {
-//       const distance = Phaser.Math.Distance.Between(
-//         circleBody.x,
-//         circleBody.y,
-//         piople.x,
-//         piople.y
-//       );
-//       if (distance < closestDistance) {
-//         closestPiople = piople;
-//         closestDistance = distance;
-//       }
-//     }
-//   });
-
-//   if (closestPiople) {
-//     // Рассчитываем направление к ближайшему piople и задаем скорость для circleBody
-//     const dx = closestPiople.x - circleBody.x;
-//     const dy = closestPiople.y - circleBody.y;
-//     const distance = Math.sqrt(dx * dx + dy * dy);
-
-//     circleBody.body.setVelocity(
-//       (dx / distance) * circleBodySpeed,
-//       (dy / distance) * circleBodySpeed
-//     );
-//   }
-// }
-
-function update3(time, delta) {
+function update3(time, delta, scene) {
   checkCollisions(this);
   // Логика управления circleBody
   if (controlMode === "mouse") {
@@ -1597,11 +1472,7 @@ function update3(time, delta) {
   } else if (controlMode === "gamepad" && gamepad) {
     moveWithGamepadScene3(delta);
   } else {
-    // updateTargetPiople(this);
-    // moveToNearestPiople();
     moveToClosestPiople(circleBody, pioples, 200); // указываем скорость, например 100
-    // moveRandomly(time, delta);
-    // moveToNearestSpectator.call(this);
   }
 
   // Проверяем нажатие кнопки A на геймпаде для переключения между геймпадом и автопилотом
@@ -1634,6 +1505,16 @@ function update3(time, delta) {
     if (piople.y > config.height) {
       piople.destroy(); // Удаляем объект, если он вышел за пределы экрана
       pioples.splice(index, 1); // Убираем из массива
+    }
+  });
+
+  // Проверка на столкновение circleBody с каждым piople
+  pioples.forEach((piople) => {
+    if (
+      Phaser.Geom.Intersects.CircleToCircle(circleBody, piople) &&
+      !isCircleBodyDelayed
+    ) {
+      delayAfterCollision(circleBody, scene);
     }
   });
 }
@@ -1674,65 +1555,44 @@ function deactivateDash() {
 // Логика движения
 function moveToMouseScene3(delta) {
   // if (!circleBodySearching) return; // Если флаг выключен, пропускаем поиск
-  const dx = mousePos.x - circleBody.x;
-  const dy = mousePos.y - circleBody.y;
-  const distance = Math.sqrt(dx * dx + dy * dy);
+  if (!isCircleBodyDelayed) {
+    const dx = mousePos.x - circleBody.x;
+    const dy = mousePos.y - circleBody.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
 
-  if (distance > 0) {
-    const directionX = dx / distance;
-    const directionY = dy / distance;
+    if (distance > 0) {
+      const directionX = dx / distance;
+      const directionY = dy / distance;
 
-    // Нормализуем вектор скорости
-    const velocityX = directionX * speed;
-    const velocityY = directionY * speed;
+      // Нормализуем вектор скорости
+      const velocityX = directionX * speed;
+      const velocityY = directionY * speed;
 
-    // Устанавливаем скорость для физического тела
-    circleBody.body.setVelocity(velocityX, velocityY);
+      // Устанавливаем скорость для физического тела
+      circleBody.body.setVelocity(velocityX, velocityY);
+    }
   }
 }
 
 function moveWithGamepadScene3(delta) {
-  // if (!circleBodySearching) return; // Если флаг выключен, пропускаем поиск
-  const axisX = gamepad.axes[0].getValue();
-  const axisY = gamepad.axes[1].getValue();
+  if (!isCircleBodyDelayed && gamepad) {
+    // if (!circleBodySearching) return; // Если флаг выключен, пропускаем поиск
+    const axisX = gamepad.axes[0].getValue();
+    const axisY = gamepad.axes[1].getValue();
 
-  // Вычисляем длину вектора (модуль)
-  const magnitude = Math.sqrt(axisX * axisX + axisY * axisY);
+    // Вычисляем длину вектора (модуль)
+    const magnitude = Math.sqrt(axisX * axisX + axisY * axisY);
 
-  // Проверяем, что вектор не нулевой, чтобы избежать деления на 0
-  if (magnitude > 0) {
-    const normalizedX = axisX / magnitude;
-    const normalizedY = axisY / magnitude;
+    // Проверяем, что вектор не нулевой, чтобы избежать деления на 0
+    if (magnitude > 0) {
+      const normalizedX = axisX / magnitude;
+      const normalizedY = axisY / magnitude;
 
-    // Устанавливаем скорость для объекта с нормализованными значениями
-    circleBody.body.setVelocity(normalizedX * speed, normalizedY * speed);
-  } else {
-    // Останавливаем объект, если джойстик в центре
-    circleBody.body.setVelocity(0, 0);
-  }
-}
-
-function moveRandomly(time, delta) {
-  if (
-    !targetSpectator ||
-    time - lastDirectionChange > changeDirectionTime ||
-    targetSpectatorReached()
-  ) {
-    targetSpectator = getNewRandomSpectator();
-    lastDirectionChange = time;
-  }
-
-  if (targetSpectator) {
-    const dx = targetSpectator.x - circleBody.x;
-    const dy = targetSpectator.y - circleBody.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-
-    if (distance > 1) {
-      const angle = Math.atan2(dy, dx);
-      circleBody.x += Math.cos(angle) * speed * (delta / 1000);
-      circleBody.y += Math.sin(angle) * speed * (delta / 1000);
+      // Устанавливаем скорость для объекта с нормализованными значениями
+      circleBody.body.setVelocity(normalizedX * speed, normalizedY * speed);
     } else {
-      targetSpectator = getNewRandomSpectator();
+      // Останавливаем объект, если джойстик в центре
+      circleBody.body.setVelocity(0, 0);
     }
   }
 }
