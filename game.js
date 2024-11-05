@@ -1223,103 +1223,70 @@ function spawnPiople(scene) {
   pioples.push(piople); // Добавляем в массив
 }
 
-// Функция для обработки коллизий
-// function handlePiopleCollision(piople, scene) {
-//   if (!piople.isStopped) {
-//     piople.isStopped = true; // Помечаем piople как остановленный
-//     piople.body.setVelocityY(0); // Останавливаем piople
+// Функция для поиска первого свободного места
+function findFreeSpot(spots) {
+  return spots.find((spot) => !spot.occupied);
+}
 
-//     // Таймер для возобновления движения
-//     scene.time.delayedCall(2000, () => {
-//       piople.body.setVelocityY(piopleSpeed); // Возобновляем движение через 2 секунды
-//       piople.isStopped = false; // Сбрасываем флаг остановки
-//     });
-//   }
-// }
-// function handlePiopleCollision(piople, scene) {
-//   // Останавливаем piople
-//   piople.body.setVelocityY(0);
+// Добавляем флаг для каждого piople, чтобы исключить повторную обработку
+pioples.forEach((piople) => {
+  piople.hasCollided = false;
+});
 
-//   // Устанавливаем двухсекундную задержку
-//   scene.time.delayedCall(2000, () => {
-//     // Случайное решение: либо продолжать движение вниз, либо занять место слева
-//     const shouldTakeSpot = Math.random() < 0.5;
-
-//     if (shouldTakeSpot) {
-//       // Пытаемся найти первое свободное место слева
-//       const freeSpot = reservedSpotsLeft.find((spot) => !spot.occupied);
-
-//       if (freeSpot) {
-//         // Перемещаем piople на место и отмечаем его как занятое
-//         piople.x = freeSpot.x;
-//         piople.y = freeSpot.y;
-//         piople.body.setVelocity(0); // Останавливаем piople
-//         piople.setFillStyle(0x0000ff); // Меняем цвет на синий
-//         freeSpot.occupied = true;
-//       } else {
-//         // Если свободных мест нет, продолжаем движение вниз
-//         piople.body.setVelocityY(piopleSpeed);
-//       }
-//     } else {
-//       // Если выбрано продолжение движения вниз
-//       piople.body.setVelocityY(piopleSpeed);
-//     }
-//   });
-// }
-function handlePiopleCollision(piople, scene) {
-  // Останавливаем piople на 2 секунды
-  piople.body.setVelocity(0);
+// Функция обработки коллизий для piople
+function handlePiopleCollision(piople, scene, spots) {
+  if (piople.hasCollided) return; // Проверка, что коллизия обрабатывается только один раз
+  piople.hasCollided = true; // Устанавливаем флаг для предотвращения повторного вызова
+  piople.body.setVelocity(0); // Останавливаем piople
 
   // Двухсекундная задержка перед выбором действия
   scene.time.delayedCall(2000, () => {
-    const shouldTakeSpot = Math.random() < 0.5;
+    const shouldTakeSpot = Math.random() < 0.5; // Случайное решение для каждого piople
 
     if (shouldTakeSpot) {
-      // Ищем первое свободное место слева
-      const freeSpot = reservedSpotsLeft.find((spot) => !spot.occupied);
+      // Используем функцию для поиска свободного места
+      const freeSpot = findFreeSpot(spots);
 
       if (freeSpot) {
-        // Вычисляем направление к свободному месту
+        freeSpot.occupied = true; // Помечаем место как занятое только при выборе занять его
+        piople.setFillStyle(0x0000ff); // Перекрашиваем в синий
+
+        console.log(`Место занято: (${freeSpot.x}, ${freeSpot.y})`); // Выводим занятое место в консоль
+
+        // Направляем piople к свободному месту с уменьшенной скоростью
         const dx = freeSpot.x - piople.x;
         const dy = freeSpot.y - piople.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
+        const adjustedSpeed = piopleSpeed * 0.75; // Уменьшенная скорость для более точного перемещения
 
-        // Задаем скорость в направлении к свободному месту
-        const velocityX = (dx / distance) * piopleSpeed;
-        const velocityY = (dy / distance) * piopleSpeed;
+        piople.body.setVelocity(
+          (dx / distance) * adjustedSpeed,
+          (dy / distance) * adjustedSpeed
+        );
 
-        piople.body.setVelocity(velocityX, velocityY);
-        piople.setFillStyle(0x0000ff); // Меняем цвет на синий
-
-        // Обновляем статус, когда piople достигает места
+        // Проверка на достижение места
         const checkArrival = scene.time.addEvent({
           delay: 50,
           callback: () => {
-            const reachedX = Math.abs(piople.x - freeSpot.x) < 2;
-            const reachedY = Math.abs(piople.y - freeSpot.y) < 2;
-            if (reachedX && reachedY) {
-              piople.body.setVelocity(0); // Останавливаем piople
-              freeSpot.occupied = true; // Занимаем место
-              checkArrival.remove(); // Очищаем событие
+            // Расширенная проверка прибытия, учитывающая небольшое расстояние до координат места
+            if (
+              Math.abs(piople.x - freeSpot.x) < 4 &&
+              Math.abs(piople.y - freeSpot.y) < 4
+            ) {
+              piople.body.setVelocity(0); // Останавливаем piople на месте
+              checkArrival.remove(); // Удаляем событие
             }
           },
           loop: true,
         });
       } else {
-        // Если свободных мест нет, продолжаем движение вниз
+        // Если свободных мест нет, piople продолжает движение вниз
         piople.body.setVelocityY(piopleSpeed);
       }
     } else {
-      // Если выбрано продолжить движение вниз
-      piople.body.setVelocityY(piopleSpeed);
-    }
-  });
-}
-// Вызов этой функции внутри update3 для проверки коллизий
-function checkCollisions(scene) {
-  pioples.forEach((piople) => {
-    if (Phaser.Geom.Intersects.CircleToCircle(circleBody, piople)) {
-      handlePiopleCollision(piople, scene);
+      // Если piople выбирает продолжить движение вниз, остаётся зелёным
+      piople.setFillStyle(0x00ff00);
+      piople.body.setVelocity(0, piopleSpeed); // Двигается строго вниз
     }
   });
 }
@@ -1460,6 +1427,17 @@ function update3(time, delta) {
     if (piople.y > config.height) {
       piople.destroy(); // Удаляем объект, если он вышел за пределы экрана
       pioples.splice(index, 1); // Убираем из массива
+    }
+  });
+}
+
+function checkCollisions(scene) {
+  pioples.forEach((piople) => {
+    if (
+      !piople.hasCollided &&
+      Phaser.Geom.Intersects.CircleToCircle(circleBody, piople)
+    ) {
+      handlePiopleCollision(piople, scene, reservedSpotsLeft);
     }
   });
 }
