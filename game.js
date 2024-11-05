@@ -1238,6 +1238,7 @@ function handlePiopleCollision(piople, scene, spots) {
   if (piople.hasCollided) return; // Проверка, что коллизия обрабатывается только один раз
   piople.hasCollided = true; // Устанавливаем флаг для предотвращения повторного вызова
   piople.body.setVelocity(0); // Останавливаем piople
+  // collidedPioples.push(piople); // Добавляем в достигнутые
 
   // Двухсекундная задержка перед выбором действия
   scene.time.delayedCall(2000, () => {
@@ -1385,6 +1386,209 @@ function create3() {
     loop: true,
   });
 }
+
+// Массив для хранения piople, с которыми была коллизия
+let ignorePioples = [];
+let isStopped = false; // Флаг для отслеживания состояния остановки
+
+function findClosestPiople(circleBody, pioples) {
+  let closestPiople = null;
+  let minDistance = Infinity;
+
+  pioples.forEach((piople) => {
+    // Пропускаем `piople`, если он находится в `ignorePioples`
+    if (ignorePioples.includes(piople)) return;
+
+    const distance = Phaser.Math.Distance.Between(
+      circleBody.x,
+      circleBody.y,
+      piople.x,
+      piople.y
+    );
+    if (distance < minDistance) {
+      minDistance = distance;
+      closestPiople = piople;
+    }
+  });
+
+  return closestPiople;
+}
+
+function moveToClosestPiople(circleBody, pioples, speed) {
+  if (isStopped) return; // Если остановлен, не двигаем circleBody
+
+  const target = findClosestPiople(circleBody, pioples);
+
+  if (target) {
+    const dx = target.x - circleBody.x;
+    const dy = target.y - circleBody.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    // Устанавливаем скорость в направлении ближайшего `piople`
+    circleBody.body.setVelocity(
+      (dx / distance) * speed,
+      (dy / distance) * speed
+    );
+
+    // Проверяем коллизии и добавляем `piople` в `ignorePioples`
+    if (Phaser.Geom.Intersects.CircleToCircle(circleBody, target)) {
+      ignorePioples.push(target); // Добавляем в игнорируемые объекты
+      // Останавливаем circleBody на 1 секунду
+      circleBody.body.setVelocity(0);
+      isStopped = true;
+      // Таймер для возобновления движения
+      circleBody.scene.time.delayedCall(1000, () => {
+        isStopped = false; // Снимаем остановку
+      });
+      // Через 1 секунду удаляем `piople` из `ignorePioples`, чтобы он снова стал доступен
+      // circleBody.scene.time.delayedCall(1000, () => {
+      //   ignorePioples = ignorePioples.filter((piople) => piople !== target);
+      // });
+    }
+  }
+}
+
+// let currentTarget = null; // для хранения текущего целевого piople
+// let ignorePiople = null; // Глобальная переменная для игнорирования piople на время
+let circleBodySpeed = 200;
+
+// function moveToNearestPiople(circleBody, pioples) {
+//   // Ищем ближайшего piople
+//   let nearestPiople = null;
+//   let nearestDistance = Infinity;
+
+//   pioples.forEach((piople) => {
+//     if (piople !== ignorePiople) { // Пропускаем игнорируемого piople
+//       const distance = Phaser.Math.Distance.Between(
+//         circleBody.x,
+//         circleBody.y,
+//         piople.x,
+//         piople.y
+//       );
+
+//       if (distance < nearestDistance) {
+//         nearestDistance = distance;
+//         nearestPiople = piople;
+//       }
+//     }
+//   });
+
+//   // Если найден ближайший piople, перемещаемся к нему
+//   if (nearestPiople) {
+//     const dx = nearestPiople.x - circleBody.x;
+//     const dy = nearestPiople.y - circleBody.y;
+//     const distance = Math.sqrt(dx * dx + dy * dy);
+//     circleBody.setVelocity((dx / distance) * circleBodySpeed, (dy / distance) * circleBodySpeed);
+//   }
+// }
+// Функция для поиска ближайшего piople и перемещения circleBody к нему
+// function updateTargetPiople(scene) {
+//   let closestPiople = null;
+//   let closestDistance = Infinity;
+
+//   pioples.forEach((piople) => {
+//     if (!Phaser.Geom.Intersects.CircleToCircle(circleBody, piople)) {
+//       const distance = Phaser.Math.Distance.Between(
+//         circleBody.x,
+//         circleBody.y,
+//         piople.x,
+//         piople.y
+//       );
+//       if (distance < closestDistance) {
+//         closestPiople = piople;
+//         closestDistance = distance;
+//       }
+//     }
+//   });
+
+//   if (closestPiople) {
+//     // Рассчитываем направление к ближайшему piople и задаем скорость для circleBody
+//     const dx = closestPiople.x - circleBody.x;
+//     const dy = closestPiople.y - circleBody.y;
+//     const distance = Math.sqrt(dx * dx + dy * dy);
+
+//     circleBody.body.setVelocity(
+//       (dx / distance) * circleBodySpeed,
+//       (dy / distance) * circleBodySpeed
+//     );
+//   }
+// }
+// let lastCollisionTime = 0; // Время последней коллизии
+// // Массив для хранения уже достигнутых pioples
+// let collidedPioples = [];
+
+// // Функция для обновления цели piople
+// function updateTargetPiople() {
+//   // Таймер на переключение после коллизии
+
+//   let nearestPiople = null;
+//   let minDistance = Infinity;
+
+//   // Поиск ближайшего piople, исключая те, с которыми уже была коллизия
+//   pioples.forEach((piople) => {
+//     if (!collidedPioples.includes(piople)) {
+//       // исключаем уже достигнутых
+//       const distance = Phaser.Math.Distance.Between(
+//         circleBody.x,
+//         circleBody.y,
+//         piople.x,
+//         piople.y
+//       );
+
+//       if (distance < minDistance) {
+//         minDistance = distance;
+//         nearestPiople = piople;
+//       }
+//     }
+//   });
+
+//   // Назначаем новую цель, если такая найдена
+//   if (nearestPiople) {
+//     targetPiople = nearestPiople;
+//   } else {
+//     // Очищаем список после полного обхода, чтобы круг возобновил работу
+//     collidedPioples = [];
+//   }
+// }
+
+// Функция для поиска ближайшего piople и перемещения circleBody к нему
+// function updateTargetPiople(scene, time) {
+//   // Проверка, прошла ли секунда с момента последней коллизии
+//   if (time - lastCollisionTime < 1000) {
+//     return;
+//   }
+
+//   let closestPiople = null;
+//   let closestDistance = Infinity;
+
+//   pioples.forEach((piople) => {
+//     if (!Phaser.Geom.Intersects.CircleToCircle(circleBody, piople)) {
+//       const distance = Phaser.Math.Distance.Between(
+//         circleBody.x,
+//         circleBody.y,
+//         piople.x,
+//         piople.y
+//       );
+//       if (distance < closestDistance) {
+//         closestPiople = piople;
+//         closestDistance = distance;
+//       }
+//     }
+//   });
+
+//   if (closestPiople) {
+//     // Рассчитываем направление к ближайшему piople и задаем скорость для circleBody
+//     const dx = closestPiople.x - circleBody.x;
+//     const dy = closestPiople.y - circleBody.y;
+//     const distance = Math.sqrt(dx * dx + dy * dy);
+
+//     circleBody.body.setVelocity(
+//       (dx / distance) * circleBodySpeed,
+//       (dy / distance) * circleBodySpeed
+//     );
+//   }
+// }
+
 function update3(time, delta) {
   checkCollisions(this);
   // Логика управления circleBody
@@ -1393,7 +1597,10 @@ function update3(time, delta) {
   } else if (controlMode === "gamepad" && gamepad) {
     moveWithGamepadScene3(delta);
   } else {
-    moveRandomly(time, delta);
+    // updateTargetPiople(this);
+    // moveToNearestPiople();
+    moveToClosestPiople(circleBody, pioples, 200); // указываем скорость, например 100
+    // moveRandomly(time, delta);
     // moveToNearestSpectator.call(this);
   }
 
@@ -1438,6 +1645,7 @@ function checkCollisions(scene) {
       Phaser.Geom.Intersects.CircleToCircle(circleBody, piople)
     ) {
       handlePiopleCollision(piople, scene, reservedSpotsLeft);
+      lastCollisionTime = scene.time.now; // Обновляем время последней коллизии
     }
   });
 }
