@@ -1238,12 +1238,17 @@ pioples.forEach((piople) => {
 // Функция обработки коллизий для piople
 function handlePiopleCollision(piople, scene, spots) {
   if (piople.hasCollided) return; // Проверка, что коллизия обрабатывается только один раз
+  occupiedPioples.delete(piople); // Освобождаем место после столкновения
   piople.hasCollided = true; // Устанавливаем флаг для предотвращения повторного вызова
   piople.body.setVelocity(0); // Останавливаем piople
   // collidedPioples.push(piople); // Добавляем в достигнутые
 
+  // Проверяем, есть ли body у piople
+  if (!piople.body) return;
+
   // Двухсекундная задержка перед выбором действия
   scene.time.delayedCall(2000, () => {
+    if (!piople.body) return;
     const shouldTakeSpot = Math.random() < 0.5; // Случайное решение для каждого piople
 
     if (shouldTakeSpot) {
@@ -1262,15 +1267,21 @@ function handlePiopleCollision(piople, scene, spots) {
         const distance = Math.sqrt(dx * dx + dy * dy);
         const adjustedSpeed = piopleSpeed * 0.75; // Уменьшенная скорость для более точного перемещения
 
-        piople.body.setVelocity(
-          (dx / distance) * adjustedSpeed,
-          (dy / distance) * adjustedSpeed
-        );
+        if (piople.body) {
+          piople.body.setVelocity(
+            (dx / distance) * adjustedSpeed,
+            (dy / distance) * adjustedSpeed
+          );
+        }
 
         // Проверка на достижение места
         const checkArrival = scene.time.addEvent({
           delay: 50,
           callback: () => {
+            if (!piople.body) {
+              checkArrival.remove(); // Прекращаем проверку, если body больше нет
+              return;
+            }
             // Расширенная проверка прибытия, учитывающая небольшое расстояние до координат места
             if (
               Math.abs(piople.x - freeSpot.x) < 4 &&
@@ -1284,12 +1295,18 @@ function handlePiopleCollision(piople, scene, spots) {
         });
       } else {
         // Если свободных мест нет, piople продолжает движение вниз
-        piople.body.setVelocityY(piopleSpeed);
+        // piople.body.setVelocityY(piopleSpeed);
+        if (piople.body) {
+          piople.body.setVelocityY(piopleSpeed); // Вертикальная скорость вниз
+        }
       }
     } else {
       // Если piople выбирает продолжить движение вниз, остаётся зелёным
       piople.setFillStyle(0x00ff00);
-      piople.body.setVelocity(0, piopleSpeed); // Двигается строго вниз
+      // piople.body.setVelocity(0, piopleSpeed); // Двигается строго вниз
+      if (piople.body) {
+        piople.body.setVelocityY(piopleSpeed);
+      }
     }
   });
 }
@@ -1354,7 +1371,7 @@ function create3() {
   circleBody.body.setBounce(1, 1);
 
   // Создаем enemy3 как красный круг и включаем физику
-  enemy3 = this.add.circle(100, 100, 10, 0xff0000); // Позиция может быть любой начальной
+  enemy3 = this.add.circle(100, 100, 10, 0xd2691e); // Позиция может быть любой начальной
   this.physics.add.existing(enemy3);
 
   // Добавляем коллизию между enemy3 и pioples
@@ -1403,7 +1420,36 @@ function create3() {
 // Массив для хранения piople, с которыми была коллизия
 let ignorePioples = [];
 let isStopped = false; // Флаг для отслеживания состояния остановки
+let occupiedPioples = new Set();
 
+// function findClosestPiople(circleBody, pioples) {
+//   let closestPiople = null;
+//   let minDistance = Infinity;
+
+//   pioples.forEach((piople) => {
+//     // Пропускаем `piople`, если он находится в `ignorePioples`
+//     if (ignorePioples.includes(piople)) return;
+
+//     if (!occupiedPioples.has(piople)) {
+//       const distance = Phaser.Math.Distance.Between(
+//         circleBody.x,
+//         circleBody.y,
+//         piople.x,
+//         piople.y
+//       );
+//       if (distance < minDistance) {
+//         minDistance = distance;
+//         closestPiople = piople;
+//       }
+//     }
+//   });
+//   // Помечаем ближайшего piople как занятый
+//   // if (closestPiople) {
+//   //   occupiedPioples.add(closestPiople);
+//   // }
+
+//   return closestPiople;
+// }
 function findClosestPiople(circleBody, pioples) {
   let closestPiople = null;
   let minDistance = Infinity;
@@ -1442,6 +1488,9 @@ function moveToClosestPiople(circleBody, pioples, speed) {
       (dx / distance) * speed,
       (dy / distance) * speed
     );
+
+    // Теперь, когда движение начато, добавляем цель в occupiedPioples
+    occupiedPioples.add(target);
 
     // Проверяем коллизии и добавляем `piople` в `ignorePioples`
     if (Phaser.Geom.Intersects.CircleToCircle(circleBody, target)) {
@@ -1501,6 +1550,7 @@ function findClosestPiopleToEnemy3() {
 
 // Функция для перемещения enemy3 к ближайшему piople
 function moveEnemy3ToClosestPiople(speed) {
+  if (isStopped) return;
   const target = findClosestPiopleToEnemy3();
 
   if (target) {
@@ -1514,14 +1564,92 @@ function moveEnemy3ToClosestPiople(speed) {
     // Проверяем коллизии и добавляем `piople` в `ignorePioples`
     if (Phaser.Geom.Intersects.CircleToCircle(enemy3, target)) {
       ignorePioples.push(target); // Добавляем в игнорируемые объекты
+      // Останавливаем enemy3 на 1 секунду
+      enemy3.body.setVelocity(0);
+      isStopped = true;
+      // Таймер для возобновления движения
+      enemy3.scene.time.delayedCall(1000, () => {
+        isStopped = false; // Снимаем остановку
+      });
     }
   }
 }
 
-// Отдельная функция для обработки коллизий enemy3 с piople
+// Функция для обработки коллизий enemy3 с piople
 function handleEnemy3CollisionWithPiople(enemy, piople) {
+  if (piople.hasCollided) return; // Проверка, что коллизия обрабатывается только один раз
+  piople.hasCollided = true;
+  occupiedPioples.delete(piople); // Освобождаем место после столкновения
   console.log("Check");
-  // Здесь можно добавить дополнительную логику обработки коллизии
+
+  // Проверяем, есть ли body у piople
+  if (!piople.body) return;
+
+  // Останавливаем piople на 2 секунды при столкновении
+  piople.body.setVelocity(0);
+
+  enemy.scene.time.delayedCall(2000, () => {
+    if (!piople.body) return;
+    // Генерация случайного решения: занять место или продолжить движение вниз
+    const shouldTakeSpot = Math.random() < 0.5;
+
+    if (shouldTakeSpot) {
+      // Ищем первое свободное место справа
+      const freeSpot = reservedSpotsRight.find((spot) => !spot.occupied);
+
+      if (freeSpot) {
+        // Если свободное место найдено, piople перекрашивается в синий и движется к месту
+        piople.setFillStyle(0xff0000);
+        freeSpot.occupied = true; // Помечаем место как занятое
+
+        // Направление движения к месту
+        const dx = freeSpot.x - piople.x;
+        const dy = freeSpot.y - piople.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        // // Устанавливаем скорость для движения к месту
+        // piople.body.setVelocity(
+        //   (dx / distance) * piopleSpeed,
+        //   (dy / distance) * piopleSpeed
+        // );
+        // Проверяем наличие body перед установкой скорости
+        if (piople.body) {
+          piople.body.setVelocity(
+            (dx / distance) * piopleSpeed,
+            (dy / distance) * piopleSpeed
+          );
+        }
+
+        // Проверяем, достиг ли piople свободного места
+        const checkArrival = enemy.scene.time.addEvent({
+          delay: 50,
+          callback: () => {
+            if (!piople.body) {
+              checkArrival.remove(); // Прекращаем проверку, если body больше нет
+              return;
+            }
+
+            const reachedX = Math.abs(piople.x - freeSpot.x) < 4;
+            const reachedY = Math.abs(piople.y - freeSpot.y) < 4;
+
+            if (reachedX && reachedY) {
+              piople.body.setVelocity(0); // Останавливаем piople
+              checkArrival.remove(); // Очищаем событие
+            }
+          },
+          loop: true,
+        });
+      } else {
+        // Если свободных мест нет, piople продолжает движение вниз
+        piople.setFillStyle(0x00ff00); // Возвращаем цвет
+        piople.body.setVelocity(0, piopleSpeed); // Вертикальная скорость вниз
+      }
+    } else {
+      // Если piople выбирает продолжить движение вниз, остаётся зелёным и движется вниз
+      piople.setFillStyle(0x00ff00);
+      piople.body.setVelocity(0, piopleSpeed);
+    }
+  });
 }
 
 function update3(time, delta, scene) {
@@ -1532,7 +1660,7 @@ function update3(time, delta, scene) {
   } else if (controlMode === "gamepad" && gamepad) {
     moveWithGamepadScene3(delta);
   } else {
-    moveToClosestPiople(circleBody, pioples, 200); // указываем скорость, например 100
+    moveToClosestPiople(circleBody, pioples, 220); // указываем скорость, например 100
   }
 
   // Проверяем нажатие кнопки A на геймпаде для переключения между геймпадом и автопилотом
@@ -1585,7 +1713,7 @@ function checkCollisions(scene) {
   pioples.forEach((piople) => {
     if (
       !piople.hasCollided &&
-      Phaser.Geom.Intersects.CircleToCircle(circleBody, piople)
+      Phaser.Geom.Intersects.CircleToCircle(circleBody, piople, enemy3)
     ) {
       handlePiopleCollision(piople, scene, reservedSpotsLeft);
       lastCollisionTime = scene.time.now; // Обновляем время последней коллизии
