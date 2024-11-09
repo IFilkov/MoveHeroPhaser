@@ -1410,8 +1410,9 @@ function create3() {
   this.physics.world.setBounds(0, 0, config.width, config.height);
 
   createRoadLines(this);
+
   this.time.addEvent({
-    delay: 1000, // Интервал появления (можно регулировать)
+    delay: 500, // Интервал появления (можно регулировать)
     callback: () => spawnPiople(this),
     loop: true,
   });
@@ -1660,7 +1661,7 @@ function update3(time, delta, scene) {
   } else if (controlMode === "gamepad" && gamepad) {
     moveWithGamepadScene3(delta);
   } else {
-    moveToClosestPiople(circleBody, pioples, 220); // указываем скорость, например 100
+    moveToClosestPiople(circleBody, pioples, 211); // указываем скорость, например 100
   }
 
   // Проверяем нажатие кнопки A на геймпаде для переключения между геймпадом и автопилотом
