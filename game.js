@@ -1679,20 +1679,99 @@ function handleEnemy3CollisionWithPiople(enemy, piople) {
   });
 }
 // Функция для поиска и перемещения к ближайшим pioples
+// function startAgitatorTargetingPioples(agitator, pioples) {
+//   const closestPioples = findClosestPioples(agitator, pioples).slice(0, 5); // Находим 5 ближайших pioples
+//   // Настраиваем agitator для движения к ближайшим pioples
+//   closestPioples.forEach((piople, index) => {
+//     // Добавляем задержку между движениями к каждой цели
+//     agitator.scene.time.delayedCall(index * 800, () => {
+//       if (!agitator.active) return; // Проверка, не уничтожен ли agitator
+//       const dx = piople.x - agitator.x;
+//       const dy = piople.y - agitator.y;
+//       const distance = Math.sqrt(dx * dx + dy * dy);
+
+//       agitator.body.setVelocity((dx / distance) * 400, (dy / distance) * 400);
+//     });
+//   });
+//   // Устанавливаем таймер для уничтожения agitator через 4 секунды
+//   agitator.scene.time.delayedCall(4000, () => {
+//     if (agitator.active) {
+//       agitator.destroy();
+//     }
+//   });
+// }
+// function startAgitatorTargetingPioples(agitator, pioples) {
+//   const closestPioples = findClosestPioples(agitator, pioples).slice(0, 5); // Находим 5 ближайших pioples
+
+//   closestPioples.forEach((piople, index) => {
+//     // Добавляем задержку между движениями к каждой цели
+//     agitator.scene.time.delayedCall(index * 800, () => {
+//       if (!agitator.active) return; // Проверка, не уничтожен ли agitator
+
+//       const dx = piople.x - agitator.x;
+//       const dy = piople.y - agitator.y;
+//       const distance = Math.sqrt(dx * dx + dy * dy);
+
+//       agitator.body.setVelocity((dx / distance) * 400, (dy / distance) * 400);
+
+//       // Проверка на коллизию agitator с текущим piople
+//       const checkCollision = agitator.scene.time.addEvent({
+//         delay: 50, // Частота проверки коллизий
+//         callback: () => {
+//           if (Phaser.Geom.Intersects.CircleToCircle(agitator, piople)) {
+//             agitator.body.setVelocity(0); // Останавливаем agitator при коллизии
+//             // piople.setActive(false).setVisible(false); // Делаем piople неактивным и невидимым
+//             piople.setFillStyle(0xffd700);
+//             checkCollision.remove(); // Останавливаем проверку коллизий
+//           }
+//         },
+//         loop: true,
+//       });
+//     });
+//   });
+
+//   // Устанавливаем таймер для уничтожения agitator через 4 секунды
+//   agitator.scene.time.delayedCall(4000, () => {
+//     if (agitator.active) {
+//       agitator.destroy();
+//     }
+//   });
+// }
 function startAgitatorTargetingPioples(agitator, pioples) {
   const closestPioples = findClosestPioples(agitator, pioples).slice(0, 5); // Находим 5 ближайших pioples
-  // Настраиваем agitator для движения к ближайшим pioples
+
   closestPioples.forEach((piople, index) => {
     // Добавляем задержку между движениями к каждой цели
     agitator.scene.time.delayedCall(index * 800, () => {
-      if (!agitator.active) return; // Проверка, не уничтожен ли agitator
+      if (!agitator.active || !piople.active) return; // Проверка, не уничтожен ли agitator и активен ли piople
+
       const dx = piople.x - agitator.x;
       const dy = piople.y - agitator.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
       agitator.body.setVelocity((dx / distance) * 400, (dy / distance) * 400);
+
+      // Проверка на коллизию agitator с текущим piople
+      const checkCollision = agitator.scene.time.addEvent({
+        delay: 50, // Частота проверки коллизий
+        callback: () => {
+          // Проверка активности agitator и piople перед проверкой коллизии
+          if (
+            agitator.active &&
+            piople.active &&
+            Phaser.Geom.Intersects.CircleToCircle(agitator, piople)
+          ) {
+            agitator.body.setVelocity(0); // Останавливаем agitator при коллизии
+            // piople.setActive(false).setVisible(false); // Делаем piople неактивным и невидимым
+            piople.setFillStyle(0xffd700);
+            checkCollision.remove(); // Останавливаем проверку коллизий
+          }
+        },
+        loop: true,
+      });
     });
   });
+
   // Устанавливаем таймер для уничтожения agitator через 4 секунды
   agitator.scene.time.delayedCall(4000, () => {
     if (agitator.active) {
@@ -1700,6 +1779,7 @@ function startAgitatorTargetingPioples(agitator, pioples) {
     }
   });
 }
+
 // Функция для обработки коллизии circleBody с agitator
 function handleCircleBodyAgitatorCollision(circleBody, agitator) {
   console.log("AgentHero");
