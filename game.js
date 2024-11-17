@@ -1245,22 +1245,17 @@ function handlePiopleCollision(piople, scene, spots) {
       if (freeSpot) {
         freeSpot.occupied = true; // Помечаем место как занятое только при выборе занять его
         piople.setFillStyle(0x0000ff); // Перекрашиваем в синий
-
-        console.log(`Место занято: (${freeSpot.x}, ${freeSpot.y})`); // Выводим занятое место в консоль
-
         // Направляем piople к свободному месту с уменьшенной скоростью
         const dx = freeSpot.x - piople.x;
         const dy = freeSpot.y - piople.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         const adjustedSpeed = piopleSpeed * 0.75; // Уменьшенная скорость для более точного перемещения
-
         if (piople.body) {
           piople.body.setVelocity(
             (dx / distance) * adjustedSpeed,
             (dy / distance) * adjustedSpeed
           );
         }
-
         // Проверка на достижение места
         const checkArrival = scene.time.addEvent({
           delay: 50,
@@ -1311,7 +1306,6 @@ const rightColumnXPositions = [
 ]; // Позиции x для правых рядов
 const reservedSpotsLeft = []; // Массив для хранения серых кружков слева
 const reservedSpotsRight = []; // Массив для хранения серых кружков справа
-
 function createReservedSpots(scene) {
   // Создаем ряды слева
   leftColumnXPositions.forEach((xPos) => {
@@ -1355,7 +1349,6 @@ function spawnAgitator(scene) {
   // Обновляем цели для circleBody и enemy3
   updateTargetForCircleBody();
   updateTargetForEnemy3();
-
   scene.time.delayedCall(8000, () => {
     agitator.destroy();
     agitatorActive = false;
@@ -1396,7 +1389,6 @@ function moveToTarget(circleBody, speed) {
         (dx / distance) * speed,
         (dy / distance) * speed
       );
-
       // Проверка на коллизию с circleBody
       if (Phaser.Geom.Intersects.CircleToCircle(circleBody, currentAgitator)) {
         agitatorCollidedWithCircleBody = true; // Устанавливаем флаг
@@ -1404,7 +1396,6 @@ function moveToTarget(circleBody, speed) {
         enemy3.body.setVelocity(0); // Останавливаем enemy3
       }
     }
-
     // Проверка на коллизию с enemy3, если agitator ещё активен
     if (!agitatorCollidedWithCircleBody && !agitatorCollidedWithEnemy3) {
       const dxEnemy3 = currentAgitator.x - enemy3.x;
@@ -1416,7 +1407,6 @@ function moveToTarget(circleBody, speed) {
         (dxEnemy3 / distanceEnemy3) * speed,
         (dyEnemy3 / distanceEnemy3) * speed
       );
-
       // Проверка на коллизию с enemy3
       if (Phaser.Geom.Intersects.CircleToCircle(enemy3, currentAgitator)) {
         agitatorCollidedWithEnemy3 = true; // Устанавливаем флаг
@@ -1445,39 +1435,32 @@ function create3() {
   this.physics.add.existing(circleBody);
   circleBody.body.setCollideWorldBounds(true);
   circleBody.body.setBounce(1, 1);
-
   // Создаем enemy3 как красный круг и включаем физику
   enemy3 = this.add.circle(100, 100, 10, 0xd2691e); // Позиция может быть любой начальной
   this.physics.add.existing(enemy3);
-
   // Добавляем коллизию между enemy3 и pioples
   this.physics.add.overlap(enemy3, pioples, handleEnemy3CollisionWithPiople);
-
   // Коллизии между circleBody и agitator
   this.physics.add.overlap(circleBody, agitators, (circleBody, agitator) => {
-    agitatorCollidedWithCircleBody = true;
+    agitatorCollidedWithCircleBody = true; // Устанавливаем флаг, что circleBody столкнулся с agitator
     handleCircleBodyAgitatorCollision(circleBody, agitator);
   });
-
   // Коллизии между enemy3 и agitator
   this.physics.add.overlap(enemy3, agitators, (enemy3, agitator) => {
+    agitatorCollidedWithCircleBody = false; // Устанавливаем флаг, что enemy3 столкнулся с agitator
     handleEnemy3AgitatorCollision(enemy3, agitator);
   });
-
   this.input.on("pointermove", (pointer) => {
     mousePos.x = pointer.x;
     mousePos.y = pointer.y;
   });
-
   this.input.gamepad.on("connected", (pad) => {
     gamepad = pad;
     console.log("Gamepad connected:", gamepad);
   });
-
   if (this.input.gamepad.total > 0) {
     gamepad = this.input.gamepad.getPad(0);
   }
-
   this.input.keyboard.on("keydown-SPACE", () => {
     if (controlMode === "autopilot") {
       controlMode = "mouse";
@@ -1504,7 +1487,6 @@ function create3() {
 let ignorePioples = [];
 let isStopped = false; // Флаг для отслеживания состояния остановки
 let occupiedPioples = new Set();
-
 function findClosestPiople(circleBody, pioples) {
   let closestPiople = null;
   let minDistance = Infinity;
@@ -1573,7 +1555,6 @@ function delayAfterCollision(circleBody, scene) {
 function findClosestPiopleToEnemy3() {
   let closestPiople = null;
   let minDistance = Infinity;
-
   pioples.forEach((piople) => {
     if (ignorePioples.includes(piople)) return;
     const distance = Phaser.Math.Distance.Between(
@@ -1679,118 +1660,156 @@ function handleEnemy3CollisionWithPiople(enemy, piople) {
   });
 }
 // Функция для поиска и перемещения к ближайшим pioples
-// function startAgitatorTargetingPioples(agitator, pioples) {
-//   const closestPioples = findClosestPioples(agitator, pioples).slice(0, 5); // Находим 5 ближайших pioples
-//   // Настраиваем agitator для движения к ближайшим pioples
-//   closestPioples.forEach((piople, index) => {
-//     // Добавляем задержку между движениями к каждой цели
-//     agitator.scene.time.delayedCall(index * 800, () => {
-//       if (!agitator.active) return; // Проверка, не уничтожен ли agitator
-//       const dx = piople.x - agitator.x;
-//       const dy = piople.y - agitator.y;
-//       const distance = Math.sqrt(dx * dx + dy * dy);
-
-//       agitator.body.setVelocity((dx / distance) * 400, (dy / distance) * 400);
-//     });
-//   });
-//   // Устанавливаем таймер для уничтожения agitator через 4 секунды
-//   agitator.scene.time.delayedCall(4000, () => {
-//     if (agitator.active) {
-//       agitator.destroy();
-//     }
-//   });
-// }
-// function startAgitatorTargetingPioples(agitator, pioples) {
-//   const closestPioples = findClosestPioples(agitator, pioples).slice(0, 5); // Находим 5 ближайших pioples
-
-//   closestPioples.forEach((piople, index) => {
-//     // Добавляем задержку между движениями к каждой цели
-//     agitator.scene.time.delayedCall(index * 800, () => {
-//       if (!agitator.active) return; // Проверка, не уничтожен ли agitator
-
-//       const dx = piople.x - agitator.x;
-//       const dy = piople.y - agitator.y;
-//       const distance = Math.sqrt(dx * dx + dy * dy);
-
-//       agitator.body.setVelocity((dx / distance) * 400, (dy / distance) * 400);
-
-//       // Проверка на коллизию agitator с текущим piople
-//       const checkCollision = agitator.scene.time.addEvent({
-//         delay: 50, // Частота проверки коллизий
-//         callback: () => {
-//           if (Phaser.Geom.Intersects.CircleToCircle(agitator, piople)) {
-//             agitator.body.setVelocity(0); // Останавливаем agitator при коллизии
-//             // piople.setActive(false).setVisible(false); // Делаем piople неактивным и невидимым
-//             piople.setFillStyle(0xffd700);
-//             checkCollision.remove(); // Останавливаем проверку коллизий
-//           }
-//         },
-//         loop: true,
-//       });
-//     });
-//   });
-
-//   // Устанавливаем таймер для уничтожения agitator через 4 секунды
-//   agitator.scene.time.delayedCall(4000, () => {
-//     if (agitator.active) {
-//       agitator.destroy();
-//     }
-//   });
-// }
-function startAgitatorTargetingPioples(agitator, pioples) {
-  const closestPioples = findClosestPioples(agitator, pioples).slice(0, 5); // Находим 5 ближайших pioples
-
+function findClosestPioplesAgitator(
+  agitator,
+  pioples,
+  maxResults = 50,
+  maxRadius = 1000
+) {
+  // Фильтруем активных pioples, которые находятся в заданном радиусе
+  const filteredPioples = pioples.filter((piople) => {
+    if (!piople.active) return false; // Игнорируем неактивных
+    const dx = piople.x - agitator.x;
+    const dy = piople.y - agitator.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    return distance <= maxRadius; // Возвращаем только тех, кто в пределах maxRadius
+  });
+  // Сортируем оставшихся pioples по расстоянию до agitator
+  const sortedPioples = filteredPioples.sort((a, b) => {
+    const distanceA = Math.sqrt(
+      (a.x - agitator.x) ** 2 + (a.y - agitator.y) ** 2
+    );
+    const distanceB = Math.sqrt(
+      (b.x - agitator.x) ** 2 + (b.y - agitator.y) ** 2
+    );
+    return distanceA - distanceB;
+  });
+  // Возвращаем заданное количество ближайших результатов
+  return sortedPioples.slice(0, maxResults);
+}
+function startAgitatorTargetingPioples(
+  agitator,
+  pioples,
+  collidedWithCircleBodyFirst
+) {
+  // const closestPioples = findClosestPioples(agitator, pioples).slice(0, 5);
+  const closestPioples = findClosestPioplesAgitator(
+    agitator,
+    pioples,
+    50,
+    1000
+  );
   closestPioples.forEach((piople, index) => {
-    // Добавляем задержку между движениями к каждой цели
     agitator.scene.time.delayedCall(index * 800, () => {
       if (!agitator.active || !piople.active) return; // Проверка, не уничтожен ли agitator и активен ли piople
-
       const dx = piople.x - agitator.x;
       const dy = piople.y - agitator.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
-
       agitator.body.setVelocity((dx / distance) * 400, (dy / distance) * 400);
-
       // Проверка на коллизию agitator с текущим piople
       const checkCollision = agitator.scene.time.addEvent({
         delay: 50, // Частота проверки коллизий
         callback: () => {
-          // Проверка активности agitator и piople перед проверкой коллизии
+          // Проверка на коллизию с piople
           if (
             agitator.active &&
             piople.active &&
             Phaser.Geom.Intersects.CircleToCircle(agitator, piople)
           ) {
-            agitator.body.setVelocity(0); // Останавливаем agitator при коллизии
-            // piople.setActive(false).setVisible(false); // Делаем piople неактивным и невидимым
-            piople.setFillStyle(0xffd700);
-            checkCollision.remove(); // Останавливаем проверку коллизий
+            if (
+              collidedWithCircleBodyFirst &&
+              agitator.active &&
+              piople.active
+            ) {
+              // Если circleBody столкнулся первым, piople становится синим и занимает место слева
+              // piople.setFillStyle(0x0000ff);
+              placePiopleOnLeft(piople);
+              checkCollision.remove(); // Останавливаем проверку коллизий
+            } else {
+              // Если enemy3 столкнулся первым, piople становится красным и занимает место справа
+              // piople.setFillStyle(0xff0000);
+              placePiopleOnRight(piople);
+              checkCollision.remove(); // Останавливаем проверку коллизий
+            }
           }
         },
         loop: true,
       });
     });
   });
-
-  // Устанавливаем таймер для уничтожения agitator через 4 секунды
-  agitator.scene.time.delayedCall(4000, () => {
+  agitator.scene.time.delayedCall(10000, () => {
     if (agitator.active) {
       agitator.destroy();
     }
   });
 }
-
-// Функция для обработки коллизии circleBody с agitator
-function handleCircleBodyAgitatorCollision(circleBody, agitator) {
-  console.log("AgentHero");
-  // agitator.destroy(); // Уничтожаем agitator после коллизии (если требуется)
-  startAgitatorTargetingPioples(agitator, pioples); // Запускаем поиск ближайших pioples
+// function placePiopleOnLeft(piople) {
+//   // Логика для поиска и размещения piople на доступном месте слева
+//   console.log("ForHero");
+// }
+// function placePiopleOnRight(piople) {
+//   // Логика для поиска и размещения piople на доступном месте справа
+//   console.log("ForEnemy");
+// }
+function placePiopleOnLeft(piople) {
+  if (piople.hasCollided) return; // Проверка, что коллизия обрабатывается только один раз
+  piople.hasCollided = true;
+  occupiedPioples.delete(piople); // Освобождаем место после столкновения
+  console.log("CheckHero");
+  // Проверяем, есть ли body у piople
+  if (!piople.body) return;
+  const freeSpot = reservedSpotsLeft.find((spot) => !spot.occupied);
+  if (freeSpot) {
+    freeSpot.occupied = true; // Помечаем место как занятое
+    piople.setFillStyle(0x0000ff); // Синий цвет для piople
+    movePiopleToSpot(piople, freeSpot);
+  }
 }
-// Функция для обработки коллизии enemy3 с agitator
+
+function placePiopleOnRight(piople) {
+  if (piople.hasCollided) return; // Проверка, что коллизия обрабатывается только один раз
+  piople.hasCollided = true;
+  occupiedPioples.delete(piople); // Освобождаем место после столкновения
+  console.log("CheckEnemy");
+  // Проверяем, есть ли body у piople
+  if (!piople.body) return;
+  const freeSpot = reservedSpotsRight.find((spot) => !spot.occupied);
+  if (freeSpot) {
+    freeSpot.occupied = true; // Помечаем место как занятое
+    piople.setFillStyle(0xff0000); // Красный цвет для piople
+    movePiopleToSpot(piople, freeSpot);
+  }
+}
+
+// Вспомогательная функция для перемещения piople в заданное место
+function movePiopleToSpot(piople, spot) {
+  const dx = spot.x - piople.x;
+  const dy = spot.y - piople.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  const speed = piopleSpeed; // Используем существующую скорость piople
+
+  piople.body.setVelocity((dx / distance) * speed, (dy / distance) * speed);
+
+  // Проверка завершения перемещения
+  const interval = piople.scene.time.addEvent({
+    delay: 50,
+    callback: () => {
+      if (Math.abs(piople.x - spot.x) < 4 && Math.abs(piople.y - spot.y) < 4) {
+        piople.body.setVelocity(0);
+        interval.remove(); // Останавливаем проверку
+      }
+    },
+    loop: true,
+  });
+}
+
+function handleCircleBodyAgitatorCollision(circleBody, agitator) {
+  // Логика для обработки коллизии с circleBody
+  startAgitatorTargetingPioples(agitator, pioples, true); // true - circleBody первым столкнулся
+}
 function handleEnemy3AgitatorCollision(enemy3, agitator) {
-  console.log("AgentEnemy");
-  // agitator.destroy(); // Уничтожаем agitator после коллизии (если требуется)
-  startAgitatorTargetingPioples(agitator, pioples); // Запускаем поиск ближайших pioples
+  // Логика для обработки коллизии с enemy3
+  startAgitatorTargetingPioples(agitator, pioples, false); // false - enemy3 первым столкнулся
 }
 // Функция поиска ближайших pioples
 function findClosestPioples(agitator, pioples) {
