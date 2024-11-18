@@ -1363,7 +1363,7 @@ function updateTargetForCircleBody() {
   }
 }
 function updateTargetForEnemy3() {
-  if (agitatorActive && currentAgitator) {
+  if (agitatorActive) {
     moveToTarget(enemy3, enemy3Speed);
   } else {
     moveEnemy3ToClosestPiople(speed);
@@ -1380,7 +1380,7 @@ function startAgitatorSpawnTimer(scene) {
 // Движение к Агитатору
 function moveToTarget(circleBody, speed) {
   if (currentAgitator) {
-    // Проверка на коллизию agitator с circleBody
+    // Логика движения circleBody
     if (!agitatorCollidedWithCircleBody && !agitatorCollidedWithEnemy3) {
       const dx = currentAgitator.x - circleBody.x;
       const dy = currentAgitator.y - circleBody.y;
@@ -1389,14 +1389,21 @@ function moveToTarget(circleBody, speed) {
         (dx / distance) * speed,
         (dy / distance) * speed
       );
-      // Проверка на коллизию с circleBody
-      if (Phaser.Geom.Intersects.CircleToCircle(circleBody, currentAgitator)) {
-        agitatorCollidedWithCircleBody = true; // Устанавливаем флаг
-        circleBody.body.setVelocity(0); // Останавливаем circleBody при коллизии
-        enemy3.body.setVelocity(0); // Останавливаем enemy3
+
+      // Проверка коллизии circleBody с agitator
+      if (
+        Phaser.Geom.Intersects.CircleToCircle(
+          circleBody.body,
+          currentAgitator.body
+        )
+      ) {
+        agitatorCollidedWithCircleBody = true;
+        circleBody.body.setVelocity(0);
+        enemy3.body.setVelocity(0); // Остановка enemy3
       }
     }
-    // Проверка на коллизию с enemy3, если agitator ещё активен
+
+    // Логика движения enemy3
     if (!agitatorCollidedWithCircleBody && !agitatorCollidedWithEnemy3) {
       const dxEnemy3 = currentAgitator.x - enemy3.x;
       const dyEnemy3 = currentAgitator.y - enemy3.y;
@@ -1407,15 +1414,77 @@ function moveToTarget(circleBody, speed) {
         (dxEnemy3 / distanceEnemy3) * speed,
         (dyEnemy3 / distanceEnemy3) * speed
       );
-      // Проверка на коллизию с enemy3
-      if (Phaser.Geom.Intersects.CircleToCircle(enemy3, currentAgitator)) {
-        agitatorCollidedWithEnemy3 = true; // Устанавливаем флаг
-        enemy3.body.setVelocity(0); // Останавливаем enemy3 при коллизии
-        circleBody.body.setVelocity(0); // Останавливаем circleBody
+
+      // Проверка коллизии enemy3 с agitator
+      if (
+        Phaser.Geom.Intersects.CircleToCircle(enemy3.body, currentAgitator.body)
+      ) {
+        agitatorCollidedWithEnemy3 = true;
+        enemy3.body.setVelocity(0);
+        circleBody.body.setVelocity(0); // Остановка circleBody
       }
+    }
+
+    // Остановка объектов, если один из них уже столкнулся
+    if (agitatorCollidedWithCircleBody || agitatorCollidedWithEnemy3) {
+      circleBody.body.setVelocity(0);
+      enemy3.body.setVelocity(0);
     }
   }
 }
+// function moveToTarget(circleBody, speed) {
+//   if (currentAgitator) {
+//     // Движение circleBody к agitator
+//     if (!agitatorCollidedWithCircleBody && !agitatorCollidedWithEnemy3) {
+//       const dx = currentAgitator.x - circleBody.x;
+//       const dy = currentAgitator.y - circleBody.y;
+//       const distance = Math.sqrt(dx * dx + dy * dy);
+//       circleBody.body.setVelocity(
+//         (dx / distance) * speed,
+//         (dy / distance) * speed
+//       );
+
+//       // Проверка коллизии circleBody с agitator
+//       if (
+//         Phaser.Geom.Intersects.CircleToCircle(
+//           circleBody.body,
+//           currentAgitator.body
+//         )
+//       ) {
+//         agitatorCollidedWithCircleBody = true; // Устанавливаем флаг
+//         console.log("CircleBody столкнулся с agitator");
+//       }
+//     }
+
+//     // Движение enemy3 к agitator
+//     if (!agitatorCollidedWithCircleBody && !agitatorCollidedWithEnemy3) {
+//       const dxEnemy3 = currentAgitator.x - enemy3.x;
+//       const dyEnemy3 = currentAgitator.y - enemy3.y;
+//       const distanceEnemy3 = Math.sqrt(
+//         dxEnemy3 * dxEnemy3 + dyEnemy3 * dyEnemy3
+//       );
+//       enemy3.body.setVelocity(
+//         (dxEnemy3 / distanceEnemy3) * speed,
+//         (dyEnemy3 / distanceEnemy3) * speed
+//       );
+
+//       // Проверка коллизии enemy3 с agitator
+//       if (
+//         Phaser.Geom.Intersects.CircleToCircle(enemy3.body, currentAgitator.body)
+//       ) {
+//         agitatorCollidedWithEnemy3 = true; // Устанавливаем флаг
+//         console.log("Enemy3 столкнулся с agitator");
+//       }
+//     }
+
+//     // После столкновения переключаемся на piople
+//     if (agitatorCollidedWithCircleBody || agitatorCollidedWithEnemy3) {
+//       moveToClosestPiople(circleBody, speed); // CircleBody переключается на ближайшего piople
+//       moveToClosestPiople(enemy3, speed); // Enemy3 переключается на ближайшего piople
+//     }
+//   }
+// }
+
 function preload3() {}
 let enemy3; // Переменная для enemy3
 function create3() {
@@ -1443,11 +1512,13 @@ function create3() {
   // Коллизии между circleBody и agitator
   this.physics.add.overlap(circleBody, agitators, (circleBody, agitator) => {
     agitatorCollidedWithCircleBody = true; // Устанавливаем флаг, что circleBody столкнулся с agitator
+    // agitatorCollidedWithEnemy3 = false;
     handleCircleBodyAgitatorCollision(circleBody, agitator);
   });
   // Коллизии между enemy3 и agitator
   this.physics.add.overlap(enemy3, agitators, (enemy3, agitator) => {
-    agitatorCollidedWithCircleBody = false; // Устанавливаем флаг, что enemy3 столкнулся с agitator
+    // agitatorCollidedWithCircleBody = false; // Устанавливаем флаг, что enemy3 столкнулся с agitator
+    agitatorCollidedWithEnemy3 = true;
     handleEnemy3AgitatorCollision(enemy3, agitator);
   });
   this.input.on("pointermove", (pointer) => {
