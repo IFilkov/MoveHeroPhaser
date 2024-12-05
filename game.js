@@ -1332,10 +1332,12 @@ let agitatorActive = false;
 let currentAgitator = null;
 let agitatorCollidedWithCircleBody = false; // Сброс флага для circleBody
 let agitatorCollidedWithEnemy3 = false; // Сброс флага для enemy3
+let agitatorMode = "down"; // Возможные значения: "down", "targeting"
 // Функция для появления agitator
 function spawnAgitator(scene) {
   agitatorCollidedWithCircleBody = false; // Сброс флага
   agitatorCollidedWithEnemy3 = false;
+  agitatorMode = "down"; // Устанавливаем начальный режим
   const xPosition = Phaser.Math.Between(
     roadMargin,
     scene.scale.width - roadMargin
@@ -1515,12 +1517,14 @@ function create3() {
   this.physics.add.overlap(circleBody, agitators, (circleBody, agitator) => {
     agitatorCollidedWithCircleBody = true; // Устанавливаем флаг, что circleBody столкнулся с agitator
     // agitatorCollidedWithEnemy3 = false;
+    agitatorMode = "targeting"; // Переключаем режим
     handleCircleBodyAgitatorCollision(circleBody, agitator);
   });
   // Коллизии между enemy3 и agitator
   this.physics.add.overlap(enemy3, agitators, (enemy3, agitator) => {
     // agitatorCollidedWithCircleBody = false; // Устанавливаем флаг, что enemy3 столкнулся с agitator
     agitatorCollidedWithEnemy3 = true;
+    agitatorMode = "targeting"; // Переключаем режим
     handleEnemy3AgitatorCollision(enemy3, agitator);
   });
   this.input.on("pointermove", (pointer) => {
@@ -1807,31 +1811,67 @@ function startAgitatorTargetingPioples(
   agitator.collidedWithCircleBodyFirst = collidedWithCircleBodyFirst;
 }
 
+// function updateAgitatorMovement(agitator, speed) {
+//   // Если agitator не активен или цели отсутствуют, ничего не делаем
+//   if (!agitator.active || !currentTarget) {
+//     agitator.body.setVelocity(0); // Останавливаем agitator
+//     return;
+//   }
+
+//   const dx = currentTarget.x - agitator.x;
+//   const dy = currentTarget.y - agitator.y;
+//   const distance = Math.sqrt(dx * dx + dy * dy);
+
+//   // Движемся к текущей цели
+//   agitator.body.setVelocity((dx / distance) * speed, (dy / distance) * speed);
+
+//   // Проверяем достижение цели
+//   if (distance < 10) {
+//     // Обработка достижения цели
+//     handleAgitatorReachedTarget(agitator, currentTarget);
+
+//     // Переходим к следующей цели
+//     currentTarget = targetsQueue.shift() || null; // Если очередь пуста, сбрасываем currentTarget
+
+//     // Если целей больше нет, останавливаем agitator
+//     if (!currentTarget) {
+//       agitator.body.setVelocity(0);
+//     }
+//   }
+// }
 function updateAgitatorMovement(agitator, speed) {
-  // Если agitator не активен или цели отсутствуют, ничего не делаем
-  if (!agitator.active || !currentTarget) {
-    agitator.body.setVelocity(0); // Останавливаем agitator
-    return;
-  }
+  if (!agitator.active) return; // Если agitator не активен, ничего не делаем
 
-  const dx = currentTarget.x - agitator.x;
-  const dy = currentTarget.y - agitator.y;
-  const distance = Math.sqrt(dx * dx + dy * dy);
+  if (agitatorMode === "down") {
+    // Продолжает двигаться вниз
+    agitator.body.setVelocityY(100);
 
-  // Движемся к текущей цели
-  agitator.body.setVelocity((dx / distance) * speed, (dy / distance) * speed);
-
-  // Проверяем достижение цели
-  if (distance < 10) {
-    // Обработка достижения цели
-    handleAgitatorReachedTarget(agitator, currentTarget);
-
-    // Переходим к следующей цели
-    currentTarget = targetsQueue.shift() || null; // Если очередь пуста, сбрасываем currentTarget
-
-    // Если целей больше нет, останавливаем agitator
+    // Проверка на выход за границы экрана
+    if (agitator.y > config.height) {
+      agitator.destroy();
+      agitatorActive = false;
+      currentAgitator = null;
+    }
+  } else if (agitatorMode === "targeting") {
+    // Движение к текущей цели
     if (!currentTarget) {
       agitator.body.setVelocity(0);
+      return;
+    }
+
+    const dx = currentTarget.x - agitator.x;
+    const dy = currentTarget.y - agitator.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    agitator.body.setVelocity((dx / distance) * speed, (dy / distance) * speed);
+
+    // Проверяем достижение цели
+    if (distance < 10) {
+      handleAgitatorReachedTarget(agitator, currentTarget);
+      currentTarget = targetsQueue.shift() || null;
+      if (!currentTarget) {
+        agitator.body.setVelocity(0);
+      }
     }
   }
 }
@@ -1902,10 +1942,14 @@ function movePiopleToSpot(piople, spot) {
 }
 
 function handleCircleBodyAgitatorCollision(circleBody, agitator) {
+  agitatorCollidedWithCircleBody = true;
+  agitator.body.setVelocity(0); // Остановка agitator
   // Логика для обработки коллизии с circleBody
   startAgitatorTargetingPioples(agitator, pioples, true); // true - circleBody первым столкнулся
 }
 function handleEnemy3AgitatorCollision(enemy3, agitator) {
+  agitatorCollidedWithEnemy3 = true;
+  agitator.body.setVelocity(0); // Остановка agitator
   // Логика для обработки коллизии с enemy3
   startAgitatorTargetingPioples(agitator, pioples, false); // false - enemy3 первым столкнулся
 }
